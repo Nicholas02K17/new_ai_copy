@@ -44,26 +44,17 @@ LIF.directory = (function () {
     });
   }
 
+  /* Groups moved out of the plain directory grid. The Human Mapping
+     asks for a landing screen with My Groups, Explore Groups, the
+     doc's filters and a Map — and it rules out the "Join group"
+     button this used to render, since discoverable Groups never use
+     public instant join. js/groupsHub.js owns all of that now; this
+     just hands over the mount point. */
   function renderGroups() {
-    var grid = U.$('#groupsGrid');
-    if (!grid) return;
-    grid.innerHTML = LIF.GROUPS.map(function (g) {
-      var sector = U.getSector(g.sector);
-      return '<div class="directory-card">' +
-        '<h4>' + U.escapeHtml(g.name) + '</h4>' +
-        '<div class="directory-card-sub">' + g.memberCount + ' members</div>' +
-        '<p>' + U.escapeHtml(g.description) + '</p>' +
-        '<div class="directory-card-tags">' + (sector ? '<span class="badge">' + U.escapeHtml(sector.name) + '</span>' : '') + '</div>' +
-        '<button class="btn-secondary" data-join="' + g.id + '" type="button">Join group</button>' +
-        '</div>';
-    }).join('');
-    U.$all('[data-join]', grid).forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var g = LIF.GROUPS.find(function (x) { return x.id === btn.dataset.join; });
-        U.backendPlaceholder('Joining ' + (g ? g.name : 'this group'));
-      });
-    });
+    if (LIF.groupsHub) LIF.groupsHub.render();
   }
+
+
 
   function renderOrganizations() {
     var grid = U.$('#organizationsGrid');

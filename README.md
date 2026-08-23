@@ -1,9 +1,10 @@
 # LiF Hub — frontend prototype
 
 A frontend-only build of the LiF Interactive Engagement Hub: an events map, a master calendar,
-directories for People / Groups / Organizations / Opportunities, a personal dashboard, the full
-events and gatherings pathway (§6), a per-member theme drawn from the chakra palette (§7), and a
-"More Features" panel so each member can build their own minimal-to-full view of the hub.
+directories for People / Organizations / Opportunities, a personal dashboard, the full events and
+gatherings pathway (§6), the full Groups pathway built to the Groups Human Mapping v1.0 (§7), a
+per-member theme drawn from the chakra palette (§8), and a "More Features" panel so each member
+can build their own minimal-to-full view of the hub.
 
 Everything that needs a real server (sign in, connect with someone, join a group, edit a profile)
 is wired to a single obvious placeholder for now. Everything that doesn't need a server is fully
@@ -23,6 +24,7 @@ lif-hub/
 ├── index.html              ← the events hub — map, calendar, directories
 ├── dashboard.html          ← the personal dashboard (see §5) — where a signed-in member lands
 ├── event.html              ← one event's own page (see §6) — where every register link lands
+├── group.html              ← one Group: Details from outside, Group Home from inside (see §7)
 ├── login.html              ← sign in with a one-time code
 ├── register.html           ← sign up
 ├── package.json            ← optional, just gives you `npm start`
@@ -32,6 +34,7 @@ lif-hub/
 │   ├── main.css             ← layout & every component's styling
 │   ├── dashboard.css        ← the dashboard page's own stylesheet
 │   ├── events.css           ← the events pathway: proposal wizard, registration, event page
+│   ├── groups.css           ← the Groups pathway: landing, card, Details, Group Home, proposal
 │   └── palette.css          ← the chakra palette + the theme picker (see §7) — loaded LAST
 └── js/
     ├── theme.js              ← the theme engine + picker. Loaded in <head>, before anything paints
@@ -46,6 +49,10 @@ lif-hub/
     ├── eventRegistration.js          ← registration, payment step, confirmation, calendar links
     ├── eventPage.js                   ← event.html — details, register, post-event, host tools
     ├── hubEvents.js                    ← the hub's hover preview and the #propose deep link
+    ├── groupsModel.js                   ← the Groups domain: states, roles, capabilities, the store
+    ├── groupProposal.js                  ← Propose a New Group — resumable, autosaving, 7 steps
+    ├── groupsHub.js                       ← the Groups landing: My Groups, Explore, filters, Map
+    ├── groupPage.js                        ← group.html — Details, Group Home and every Group Area
     ├── dashboard.js                     ← personal dashboard sidebar
     ├── directory.js                      ← People / Groups / Organizations / Opportunities grids
     ├── calendarView.js                    ← FullCalendar wrapper
@@ -362,7 +369,176 @@ one session:
 
 ---
 
-## 7. Choose your own theme
+## 7. Groups — built to the Human Mapping v1.0
+
+The Groups section is the Human Mapping implemented end to end: discovery, the Group card and the
+authoritative Group Details record, Request Access, both kinds of invitation, Group Home and its
+Group Areas, roles and capabilities, the five communication modes, Calls for Engagement, Resources,
+Group Events, notifications, care and reporting, leaving, the full lifecycle, and the proposal
+pathway with LiF review.
+
+### 7.1 The three rules that shaped the code
+
+Everything else follows from these, so they are worth stating before the file list.
+
+**There is no `join()`.** The doc says plainly that *"Discoverable Groups do not use public instant
+join."* So the API has no such function. Participation begins through `requestAccess()` or
+`acceptInvitation()`, and an invitation only creates a membership if it carries direct-access
+authority — otherwise it opens Request Access. The old one-click **Join group** button that the
+Groups directory used to render is gone.
+
+**Discoverability, content visibility and membership are three rules, not one flag.**
+`canDiscover()`, `canSeeDetails()` and `canParticipate()` are separate functions and a Group can be
+any combination of them. An unlisted Group is reachable by a direct link but never appears in
+Explore; a private Group shows nothing at all to anyone outside it; an archived Group is fully
+readable by its Members and accepts nothing new.
+
+**Proposal Draft and Pending are proposal states; a provisioned Group uses the other six.** Both
+live in one `status` field with an `isProposalState()` helper, rather than two fields that can
+disagree with each other.
+
+### 7.2 Where it lives
+
+| File | What it owns |
+|---|---|
+| `js/groupsModel.js` | Taxonomies, the normaliser, the store, and `LIF.groups` — the whole domain API. No DOM at all. |
+| `js/groupsHub.js` | The Groups landing: My Groups, Explore, the doc's filters, For Me, and the Map. |
+| `js/groupPage.js` + `group.html` | One page, two faces: Group Details from outside, Group Home from inside. Plus every panel. |
+| `js/groupProposal.js` | Propose a New Group — seven steps, autosaving, with preview and validation. |
+
+Member state lives in `LIF.groupStore`, the same three-function shape the events store uses:
+`read()`, `write()`, `queue()`. Memberships, follows, requests, invitations, proposals, threads,
+chat, announcements, calls, resources, activities and reports all sit in it. Swap those three for
+API calls and every screen follows.
+
+### 7.3 Discovery (§3)
+
+**My Groups** holds all four things the doc lists — what you belong to, follow, have requested, and
+have been invited to. **Explore Groups** shows only what you are authorized to discover.
+
+Filters are the doc's list: interest/sector, subsector, location range, format, language, structure,
+access type and current activity status. Two of its rules are easy to get wrong and are handled
+explicitly:
+
+- **For Me narrows, it never blocks.** It is a toggle over the results, not a mode that hides the
+  rest of the interface.
+- **A distance filter never drops an online-only Group.** It narrows the located ones and leaves
+  the rest alone, rather than silently making them vanish.
+
+Match explanations are visibility-safe by construction: they are built only from the viewer's own
+preferences and the Group's *published* fields, so an unpublished field cannot leak through a
+"why this matched" — which the approved direction specifically warns about.
+
+### 7.4 Coming in (§5)
+
+Three entry states, and the sample data has one of each so all three are visible in a single
+session:
+
+| Sample Group | Demonstrates |
+|---|---|
+| Money as Love Study Group | **Request Access** — the Group's own questions, a summary of what stewards will see, consent before submitting, then the four reviewer outcomes (Approve / More Information Needed / Waitlist / Decline). |
+| Compassionate Listening Peer Circle | An **authorized direct-access invitation**. Accepting creates the membership. |
+| Caring Business Roundtable | An **invitation to apply**. Accepting opens Request Access — and the invitation says so before you click, because the response wording has to match what actually happens. |
+
+Reviewer decisions carry two notes: a member-facing reason, which is the only part that reaches the
+requester, and a reviewer-only note that never appears in any message or record they can see. There
+is a test for that.
+
+### 7.5 Inside a Group (§8–§13)
+
+One shared workspace with structure-specific defaults. The four core Areas — Group Home,
+Announcements, Members and stewards, Help — are always on; the seven optional ones can be switched
+on or off without rebuilding anything. They are called **Group Areas** everywhere, never Modules.
+
+Group Home leads with §23A's four questions in order: what is this for, what is alive now, what can
+I do next, who can help — before any counts or administration.
+
+Some specifics worth knowing:
+
+- **Announcements show their audience, recipient count and channels before sending**, and only a
+  role holding the Publish Announcement capability can send one.
+- **A thread has its own Follow/Mute, separate from the Group's.** Muting a thread does not mute
+  the Group, and the UI says so where you would otherwise assume the opposite.
+- **Every Resource has its own audience.** A discoverable Group does not make its Resources public,
+  and publishing to the shared Library is a separate reviewed pathway rather than a visibility
+  toggle.
+- **Group Events use the shared Events pathway.** There is deliberately no group-specific
+  registration, reminder, payment or cancellation code — `groupEvents()` reads `LIF.EVENTS`.
+  Membership is never treated as attendance.
+- **Calls for Engagement are structured** — need, timing, place, response route, closing date — so
+  they can be searched and acted on instead of getting lost in a thread.
+
+### 7.6 Roles and capabilities (§10)
+
+A role is a named bundle; the capabilities are what actually gate anything. `can(group, capability)`
+is the only check any screen makes. The last accountable Group Admin cannot leave until a
+replacement is in place — `leaveGroup()` refuses and explains why rather than silently disabling a
+button.
+
+### 7.7 Notifications (§16)
+
+Global default → Group override → thread override, and `effectiveNotification()` always returns
+both the value and *which level decided it*, so a Member can always find out why they are getting
+something. Joining does not subscribe you to everything: the welcome step shows the default effect
+and offers Customize and Mute right there, which is the doc's volume safeguard.
+
+Essential notices — material membership, access, role, safety, privacy and governance changes — are
+always delivered whatever else is set.
+
+### 7.8 Care, leaving and lifecycle (§17–§19)
+
+Reports route by category and severity, and never only to the person reported. Member-facing
+statuses are Received / More Information Needed / Reviewing / Escalated / Resolved, with no
+confidential case detail. Moderation language is the doc's: warning, pause, temporary removal,
+removal, ban — never "kick".
+
+Leaving shows the consequences *before* the confirm, including what happens to contributions, and
+offers an optional reason without pressure.
+
+All eight lifecycle states exist in the sample data, so each one can be seen rather than imagined:
+
+| Sample Group | State |
+|---|---|
+| Bioregional Water Council | **Forming** — approved, still completing setup, with its activation tasks listed |
+| Regenerative Design Circle | **Active** |
+| Quantum Foundations Reading Circle | **Quiet** — unconfirmed activity, labelled honestly rather than recommended as active |
+| Restorative Schools Practitioners | **Paused** |
+| Johnson Creek Culvert Working Group | **Archived**, and grown out of a completed Event |
+
+### 7.9 Proposing a Group (§6)
+
+Seven steps, autosaving, resumable. Deliberately different from the events proposal, which offers a
+form *or* a guided walkthrough — this doc asks for *"a resumable multi-step pathway with autosave,
+visible status and Save and Continue"*, so that is what it is.
+
+**Nothing blocks while you write.** The approved direction says to "enforce requiredness at
+submission so early drafting remains welcoming", so validation runs once, at the Check step. It
+reports three different things: what is still missing, what the automated checks flagged (duplicate
+names, possible overlap with existing Groups — which *flag*, they never decide), and **what your
+access and privacy choices will actually mean** for the people who find the Group. That last part
+is what §6.2 asks for and it is easy to skip.
+
+Preview shows both the public Group card and the Group Details, exactly as they will appear.
+
+### 7.10 Prototype labelling
+
+§22 requires every unfinished asset to be visibly marked. The reviewer workspace, the invitation
+sender, the settings and lifecycle controls and the meeting-link Area all render inside a
+`PROTOTYPE — REQUIRES LiF APPROVAL` frame. `LIF.PROTOTYPE_LABEL` is the single string to change.
+
+### 7.11 Verified against §24
+
+§24 is effectively a test list, so it is used as one. `drive-groups.mjs` (in the scratchpad) drives
+a real DOM through every pathway and asserts each acceptance check — authorized fields only, one
+authoritative Details record per card, the action communicating which of the four it is, drafts
+saving with status, Group Areas never using Course Module terminology, stewardship continuity,
+the notification hierarchy, Group Events using the shared pathway, Resource audiences, connect not
+implying merge, and every automatic response carrying its trigger, audience, channel, template and
+delivery state. All 117 pass.
+
+---
+
+## 8. Choose your own theme
 
 Every member picks their own colour from the LiF chakra palette, and the whole playground re-tunes
 to it — buttons, links, focus rings, highlights, badges, the paper underneath, the ambient wash
@@ -406,7 +582,7 @@ the profile record as a `theme` field so it follows the member across devices �
 
 ---
 
-## 8. Known simplifications (fine for a first pass, worth knowing about)
+## 9. Known simplifications (fine for a first pass, worth knowing about)
 
 - **The dashboard uses a hardcoded demo member** — `LIF.MEMBER` in `js/dashboardData.js`, labeled
   "sample profile" in the UI. There's no real session yet; that object is exactly the shape your
@@ -435,12 +611,28 @@ the profile record as a `theme` field so it follows the member across devices �
 - **A cover image uploaded in the proposal is held as a data URL** in localStorage, which is fine
   for a prototype and wrong for production — large images will blow the storage quota. Point it at
   your media upload endpoint when there is one.
+- **LiF review of a Group proposal has no reviewer side.** Submitting sets Pending Review and files
+  the notifications; nothing moves it to Forming, because that is a steward's decision. The
+  reviewer workspace exists as a labelled prototype so the shape is visible, and the four decision
+  outcomes are wired in the model — but there is one demo member, so the queue only ever shows
+  their own request.
+- **Merge is deliberately not implemented.** Connect and Collaborate work; `relate(a, b, 'merge')`
+  refuses and explains that merge needs each Group's documented consent process and LiF technical
+  and safety review. The requirements are held in the data model so it can be added safely later,
+  exactly as the approved launch direction asks.
+- **Chat has no retention job.** It is retained in the store and would archive with the Group; the
+  disclosed retention policy is stated in the UI but nothing enforces it yet.
+- **There is one member, so `isGuest()` is never true in practice.** It is the single switch a real
+  session would flip, and every Guest-facing rule gates on it rather than on scattered checks —
+  but you cannot currently see the Guest view without setting it by hand.
+- **Group images are held as data URLs** in localStorage, same caveat as event cover images: fine
+  for a prototype, wrong for production.
 - **No drag-and-drop card ordering.** The dashboard offers three fixed layouts and per-feature
   on/off switches, matching what the team landed on, rather than free-form dragging. Cards fill the
   constellation ring in registry order; hiding one closes the ring up rather than leaving a hole.
   If free ordering is wanted later, it's one array of keys on `MEMBER.dashboard` plus a sort.
 
-## 9. Libraries used (all via CDN, no install needed)
+## 10. Libraries used (all via CDN, no install needed)
 
 | Library | Version | Why |
 |---|---|---|

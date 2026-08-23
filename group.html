@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Event — LiF Playground</title>
-<meta name="description" content="Event details and registration on the LiF Playground.">
+<title>Group — LiF Playground</title>
+<meta name="description" content="Group details and Group Home on the LiF Playground.">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,9 +16,8 @@
 <link rel="stylesheet" href="css/groups.css">
 <link rel="stylesheet" href="css/palette.css">
 
-<!-- Loaded in <head>, on purpose: it writes the member's chosen
-     colours before the page paints, so a themed member never sees a
-     flash of the default palette first. -->
+<!-- In <head> on purpose: the member's colours are written before
+     the page paints, so a themed member never sees a flash first. -->
 <script src="js/theme.js"></script>
 </head>
 <body>
@@ -44,11 +43,12 @@
 
   <nav class="ev-nav">
     <a href="index.html">Events hub</a>
+    <a href="index.html#groups">Groups</a>
     <a href="dashboard.html">My dashboard</a>
   </nav>
 
   <div class="topbar-actions">
-    <button class="btn btn--sm" type="button" data-propose-event>Propose an event</button>
+    <button class="btn btn--sm" type="button" data-propose-group>Propose a Group</button>
     <button class="icon-btn" type="button" data-theme-open aria-label="Choose your theme" title="Choose your theme">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18 4.5 4.5 0 000-9 4.5 4.5 0 010-9z"/>
@@ -57,8 +57,8 @@
   </div>
 </header>
 
-<main class="ev-page" id="eventPage">
-  <p class="ev-loading">Loading the event…</p>
+<main class="gpage" id="groupPage">
+  <p class="gpage-loading">Loading the Group…</p>
 </main>
 
 <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
@@ -69,10 +69,9 @@
 <script src="js/dashboardData.js"></script>
 <script src="js/utils.js"></script>
 <script src="js/eventsModel.js"></script>
-<script src="js/eventProposal.js"></script>
 <script src="js/eventRegistration.js"></script>
 <script src="js/groupsModel.js"></script>
 <script src="js/groupProposal.js"></script>
-<script src="js/eventPage.js"></script>
+<script src="js/groupPage.js"></script>
 </body>
 </html>

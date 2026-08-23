@@ -291,7 +291,7 @@ LIF.eventPage = (function () {
 
       '<div class="ev-after-actions">' +
         '<button class="ev-btn ev-btn--ghost" type="button" data-do="thread">Continue the conversation</button>' +
-        '<button class="ev-btn ev-btn--ghost" type="button" data-do="propose-group">Create a group from this event</button>' +
+        '<button class="ev-btn ev-btn--ghost" type="button" data-do="propose-group">Create a Group from this event</button>' +
       '</div>' +
       threadHtml(e) +
     '</section>';
@@ -303,8 +303,9 @@ LIF.eventPage = (function () {
     var posts = E.thread(e.id);
     return '<div class="ev-thread">' +
       '<h3 class="ev-h3">Continuing the conversation</h3>' +
-      '<p class="ev-hint">Everyone who came can post here. A group can grow out of it — the button above starts that ' +
-        'pathway and links the new group to this event ID.</p>' +
+      '<p class="ev-hint">Everyone who came can post here. A Group can grow out of it — the button above opens the ' +
+        'Group Proposal pathway with this event already attached, so its information carries into the Group space.</p>' +
+      '<button class="ev-btn ev-btn--ghost" type="button" data-do="propose-group">Create a Group from this conversation</button>' +
       (posts.length
         ? '<ul class="ev-posts">' + posts.map(function (p) {
             return '<li><strong>' + h(p.author) + '</strong> <span class="mono">' + h(new Date(p.at).toLocaleString()) + '</span>' +
@@ -586,9 +587,15 @@ LIF.eventPage = (function () {
         return;
       }
 
+      /* §14 of the Groups mapping: a Group grown from an Event opens
+         the Group Proposal pathway with the Event already attached,
+         so the Event's information carries into the Group space. */
       case 'propose-group':
-        U.showToast('Group creation opens the Group Proposal pathway, pre-linked to ' + evt.eventId +
-          ' so the event’s information carries into the group space. That pathway is the next one to build.');
+        if (LIF.groupProposal) {
+          LIF.groupProposal.open({ originEventId: evt.id });
+        } else {
+          U.showToast('The Group Proposal pathway is not loaded on this page.');
+        }
         return;
 
       case 'edit':

@@ -279,10 +279,11 @@ LIF.dashboardPage = (function () {
         { n: eventTasks().length, label: 'To do', isNew: eventTasks().length > 0 }
       ];
       case 'groups': return [
-        { n: M.groups.registered.length, label: 'Joined' },
-        { n: M.groups.bookmarked.length, label: 'Bookmarked' },
-        { n: suggestedGroups().length, label: 'Suggested' },
-        { n: updatedGroups().length, label: 'New', isNew: true }
+        { n: joinedGroups().length, label: 'My Groups' },
+        { n: groupInvitations().length, label: 'Invitations' },
+        { n: groupRequests().length, label: 'Requests' },
+        { n: suggestedGroupsV2().length, label: 'Suggested' },
+        { n: groupTasks().length, label: 'To do', isNew: groupTasks().length > 0 }
       ];
       case 'connections': return [
         { n: M.connections.length, label: 'Playmates' },
@@ -335,8 +336,16 @@ LIF.dashboardPage = (function () {
         return next ? 'Next up: <b>' + h(next.title) + '</b>, ' + h(relTime(next.start)) : 'Nothing on your calendar yet.';
       }
       case 'groups': {
-        var g = getGroup(M.groups.registered[0]);
-        return g ? 'Most active: <b>' + h(g.name) + '</b>' : 'You have not joined a circle yet.';
+        var todo = groupTasks();
+        if (todo.length) {
+          return '<b>' + todo.length + ' waiting on you</b> \u2014 ' + h(todo[0].label.toLowerCase()) +
+            ' in ' + h(todo[0].group.name);
+        }
+        var g = joinedGroups()[0];
+        if (!g) return 'You have not joined a Group yet.';
+        var n = LIF.groups.newSince(g.id);
+        return n ? '<b>' + n + ' new</b> in ' + h(g.name) + ' since your last visit.'
+                 : 'Most active: <b>' + h(g.name) + '</b>';
       }
       case 'connections': {
         if (M.connectionRequests.length) {
@@ -378,6 +387,41 @@ LIF.dashboardPage = (function () {
     });
     return ids.map(U.getEvent).filter(Boolean)
       .sort(function (a, b) { return ts(a.start) - ts(b.start); });
+  }
+
+  /* The same reconciliation the events panel needed. LIF.MEMBER
+     says which Groups this person belongs to; the groups store is
+     what the Group pages actually write to. Read the store, so no
+     panel can disagree with a Group page about the same fact. */
+  function joinedGroups() { return LIF.groups.myGroups(); }
+  function followedGroups() { return LIF.groups.myFollows(); }
+  function groupInvitations() { return LIF.groups.myInvitations(); }
+  function groupRequests() { return LIF.groups.myRequests(); }
+  function groupProposals() {
+    var out = M.groups.proposed.map(function (id) { return LIF.PROPOSALS[id]; }).filter(Boolean);
+    LIF.groups.proposals().forEach(function (x) { out.push(x); });
+    LIF.groups.drafts().forEach(function (x) { if (x.name) out.push(Object.assign({}, x, { status: 'Draft' })); });
+    return out;
+  }
+  function suggestedGroupsV2() {
+    return LIF.groups.suggested().map(function (r) { return { item: r.group, match: { why: r.why } }; });
+  }
+  /** Anything in Groups still waiting on this member. */
+  function groupTasks() {
+    var out = [];
+    groupInvitations().forEach(function (x) {
+      out.push({ group: x.group, label: x.invitation.kind === 'direct'
+        ? 'Accept or decline your invitation' : 'Respond to an invitation to apply' });
+    });
+    groupRequests().forEach(function (x) {
+      if (x.request.status === 'more-info') out.push({ group: x.group, label: 'A steward asked you something' });
+    });
+    joinedGroups().forEach(function (g) {
+      if (LIF.groups.isSteward(g) && LIF.groups.activityStale(g)) {
+        out.push({ group: g, label: 'Confirm what is alive now' });
+      }
+    });
+    return out;
   }
 
   /** Events this member is hosting, whatever their status. */
@@ -657,7 +701,7 @@ LIF.dashboardPage = (function () {
   var TABS = {
     profile:       [['details', 'Details'], ['interests', 'Interests'], ['preferences', 'Preferences'], ['privacy', 'Privacy']],
     events:        [['registered', 'Registered'], ['bookmarked', 'Bookmarked'], ['suggested', 'Suggested'], ['updated', 'Updated'], ['hosting', 'Hosting'], ['proposed', 'Proposed'], ['calendar', 'My calendar']],
-    groups:        [['registered', 'Joined'], ['bookmarked', 'Bookmarked'], ['suggested', 'Suggested'], ['updated', 'Updated'], ['proposed', 'Proposed']],
+    groups:        [['registered', 'My Groups'], ['invitations', 'Invitations'], ['requests', 'Requests'], ['suggested', 'Suggested'], ['following', 'Following'], ['updated', 'Updated'], ['proposed', 'Proposed']],
     connections:   [['playmates', 'Playmates'], ['requests', 'Requests'], ['suggested', 'Suggested'], ['activity', 'Activity']],
     commons:       [['tending', 'Tending'], ['explore', 'Explore']],
     resources:     [['saved', 'Saved'], ['suggested', 'Suggested'], ['library', 'Library']],
@@ -668,7 +712,7 @@ LIF.dashboardPage = (function () {
   var BLURBS = {
     profile:       'Everything other members can see about you, and everything they cannot. Each field has its own switch.',
     events:        'Everything you are registered for, watching, or being offered — plus the events you have proposed.',
-    groups:        'The circles you belong to, the ones you are watching, and the ones your preferences point at.',
+    groups:        'The Groups you belong to, follow, have asked to join or been invited to \u2014 plus the ones you have proposed.',
     connections:   'Your playmates. Activity only flows both ways when both of you have agreed to share it.',
     commons:       'Shared things members tend together — a fund, a document, a map, a practice.',
     resources:     'The library. Saved is what you kept; suggested is drawn from your sectors and subsectors.',
@@ -698,11 +742,13 @@ LIF.dashboardPage = (function () {
       case 'events:suggested':  return suggestedEvents();
       case 'events:updated':    return updatedEvents();
       case 'events:proposed':   return myProposals();
-      case 'groups:registered': return M.groups.registered.map(getGroup).filter(Boolean);
-      case 'groups:bookmarked': return M.groups.bookmarked.map(getGroup).filter(Boolean);
-      case 'groups:suggested':  return suggestedGroups();
-      case 'groups:updated':    return updatedGroups();
-      case 'groups:proposed':   return M.groups.proposed.map(function (id) { return LIF.PROPOSALS[id]; }).filter(Boolean);
+      case 'groups:registered':  return joinedGroups();
+      case 'groups:following':   return followedGroups();
+      case 'groups:invitations': return groupInvitations();
+      case 'groups:requests':    return groupRequests();
+      case 'groups:suggested':   return suggestedGroupsV2();
+      case 'groups:updated':     return updatedGroups();
+      case 'groups:proposed':    return groupProposals();
       case 'connections:playmates': return M.connections.map(getPerson).filter(Boolean);
       case 'connections:requests':  return M.connectionRequests.map(getPerson).filter(Boolean);
       case 'connections:suggested': return suggestedPeople();
@@ -734,6 +780,7 @@ LIF.dashboardPage = (function () {
         '<p class="detail-desc">' + h(BLURBS[key]) + '</p></div>' +
         '<div class="detail-head-actions">' +
           (key === 'events' ? '<button class="btn btn--sm btn--gold" type="button" data-propose-event>Propose an event</button>' : '') +
+          (key === 'groups' ? '<button class="btn btn--sm btn--gold" type="button" data-propose-group>Propose a Group</button>' : '') +
           bellHtml(key) +
           (view.drawerMode ? '<button class="icon-btn" data-action="close-drawer" type="button" aria-label="Close">' + svg('close') + '</button>' : '') +
         '</div>' +
@@ -778,7 +825,12 @@ LIF.dashboardPage = (function () {
       'events:updated':    ['Nothing has changed', 'Updates to events you follow will collect here between visits.'],
       'events:proposed':   ['You have not proposed an event', 'Anyone can propose one. A steward reviews it before it goes live.'],
       'events:hosting':    ['You are not hosting anything yet', 'Propose a gathering and it appears here from the moment you submit it.'],
-      'groups:updated':    ['No group news', 'Changes in circles you follow will show up here.'],
+      'groups:registered': ['You are not in a Group yet', 'Explore what is here, or propose the Group you wish existed.'],
+      'groups:invitations':['No invitations', 'An invitation from a Group Admin grants membership when you accept. Every other kind opens Request Access.'],
+      'groups:requests':   ['Nothing waiting', 'Requests you send appear here with their state until a steward decides.'],
+      'groups:following':  ['Not following anything', 'Follow a Group to hear when it opens or changes, without joining it.'],
+      'groups:proposed':   ['You have not proposed a Group', 'Any eligible Member can. LiF reads it for ecosystem awareness and connection, not as a gate.'],
+      'groups:updated':    ['No group news', 'Changes in Groups you belong to or follow show up here.'],
       'connections:requests': ['No pending requests', 'Connection requests from other members appear here.'],
       'connections:activity': ['Activity sharing is off', 'Turn on "receive activity updates" in Privacy to see what your playmates are up to.']
     }[key + ':' + tab] || ['Nothing here yet', 'This fills up as you move around the playground.'];
@@ -793,6 +845,8 @@ LIF.dashboardPage = (function () {
     var why = raw.match ? raw.match.why : null;
 
     if (key === 'events' && item.start) return eventRow(item, why, tab);
+    if (key === 'groups' && raw.invitation) return groupInviteRow(raw);
+    if (key === 'groups' && raw.request) return groupRequestRow(raw);
     if (key === 'groups' && item.memberCount != null) return groupRow(item, why, tab);
     if (key === 'resources') return resourceRow(item, why);
     if (key === 'commons') return commonsRow(item, why);
@@ -893,27 +947,92 @@ LIF.dashboardPage = (function () {
     return aspect ? (map[aspect.id] || 'divine') : 'divine';
   }
 
+  /* The Group card the Human Mapping describes: identity, focus,
+     format, language, access, ACCURATE activity status, and one
+     context-appropriate action. Never a one-click join \u2014 the doc
+     rules that out for discoverable Groups. */
   function groupRow(g, why, tab) {
     var sector = U.getSector(g.sector);
     var isNew = ts(g.updatedAt) > lastVisitTs();
-    var joined = M.groups.registered.indexOf(g.id) !== -1;
+    var state = LIF.groups.membershipState(g.id);
+    var action = LIF.groups.primaryAction(g);
+    var unread = LIF.groups.newSince(g.id);
+    var mine = LIF.groups.membership(g.id);
+
     return '<article class="item-row">' +
-      '<span class="item-mark"></span>' +
+      '<span class="item-mark" style="--mark:var(--a-community)"></span>' +
       '<div class="item-main">' +
         '<div class="item-title">' + h(g.name) +
-          (isNew && tab !== 'updated' ? ' <span class="badge badge--new">updated</span>' : '') + '</div>' +
+          (g.status !== 'active' ? ' <span class="badge badge--status-' + h(g.status) + '">' +
+            h(LIF.groups.stateMeta(g.status).name) + '</span>' : '') +
+          (isNew && tab !== 'updated' ? ' <span class="badge badge--new">updated</span>' : '') +
+          (g.access.discoverability === 'private' ? ' <span class="badge badge--lock">private</span>' : '') +
+          (mine && mine.role !== 'member' ? ' <span class="badge badge--live">' +
+            h((LIF.GROUP_ROLES.find(function (r) { return r.id === mine.role; }) || {}).name) + '</span>' : '') +
+        '</div>' +
         '<div class="item-meta">' +
-          '<span>' + g.memberCount + ' members</span>' +
+          '<span>' + h(LIF.groups.countLabel(g)) + '</span>' +
           (sector ? '<span class="badge badge--feat">' + h(sector.name) + '</span>' : '') +
-          (g.subsector ? '<span class="badge">' + h(g.subsector) + '</span>' : '') +
-          (joined ? '<span class="badge badge--live">joined</span>' : '') +
+          '<span class="badge">' + h(LIF.groups.structureMeta(g.structure).name) + '</span>' +
+          '<span class="badge">' + h(g.format) + '</span>' +
+          '<span class="badge">' + h(g.languages.primary) + '</span>' +
+          (state === 'active' ? '<span class="badge badge--live">Member</span>' : '') +
         '</div>' +
         '<p class="item-summary">' + h(g.description) + '</p>' +
+        (g.activityPlan ? '<p class="item-summary"><strong>Alive now:</strong> ' + h(g.activityPlan) + '</p>' : '') +
         whyHtml(why) +
+        (unread
+          ? '<div class="item-todo item-todo--calm">' + svg('spark') +
+            '<a class="item-todo-btn" href="group.html?id=' + h(g.id) + '">' + unread + ' new since your last visit</a></div>'
+          : '') +
+        (LIF.groups.isSteward(g) && LIF.groups.activityStale(g)
+          ? '<div class="item-todo">' + svg('spark') + '<span>Waiting on you:</span>' +
+            '<a class="item-todo-btn" href="group.html?id=' + h(g.id) + '">Confirm what is alive now</a></div>'
+          : '') +
       '</div>' +
-      '<div class="item-actions">' + bookmarkBtn('group', g.id) + muteBtn(g.id) +
-        '<button class="btn btn--sm ' + (joined ? '' : 'btn--primary') + '" data-action="pending" data-label="' +
-          (joined ? 'Opening ' + h(g.name) : 'Joining ' + h(g.name)) + '" type="button">' + (joined ? 'Open' : 'Join') + '</button>' +
+      '<div class="item-actions">' + muteBtn(g.id) +
+        '<a class="btn btn--sm btn--gold" href="group.html?id=' + h(g.id) + '">' +
+          h(state === 'active' ? 'Open' : action.label) + '</a>' +
+      '</div></article>';
+  }
+
+  /* An open invitation. The two kinds do different things, so the
+     row says which before anyone clicks. */
+  function groupInviteRow(raw) {
+    var g = raw.group, inv = raw.invitation;
+    var direct = inv.kind === 'direct';
+    return '<article class="item-row">' +
+      '<span class="item-mark" style="--mark:var(--a-community)"></span>' +
+      '<div class="item-main">' +
+        '<div class="item-title">' + h(g.name) +
+          ' <span class="badge badge--live">' + h(direct ? 'grants membership' : 'opens Request Access') + '</span></div>' +
+        '<div class="item-meta"><span>from ' + h(inv.fromName) + '</span>' +
+          '<span class="mono">' + h(relTime(inv.at)) + '</span></div>' +
+        (inv.message ? '<p class="item-summary">\u201C' + h(inv.message) + '\u201D</p>' : '') +
+      '</div>' +
+      '<div class="item-actions">' +
+        '<a class="btn btn--sm btn--gold" href="group.html?id=' + h(g.id) + '">Respond</a>' +
+      '</div></article>';
+  }
+
+  /* A request waiting on a steward, with the state the doc names. */
+  function groupRequestRow(raw) {
+    var g = raw.group, r = raw.request;
+    var label = { pending: 'Request Pending', 'more-info': 'More Information Needed',
+                  waitlist: 'Waitlisted', approve: 'Approved', decline: 'Declined' }[r.status] || r.status;
+    return '<article class="item-row">' +
+      '<span class="item-mark" style="--mark:var(--gold)"></span>' +
+      '<div class="item-main">' +
+        '<div class="item-title">' + h(g.name) + ' <span class="badge badge--warn">' + h(label) + '</span></div>' +
+        '<div class="item-meta"><span class="mono">asked ' + h(relTime(r.at)) + '</span></div>' +
+        '<p class="item-summary">' + h(r.reviewerNote ||
+          'A steward reviews every request and comes back with a reason and a clear next action, whichever way it goes.') + '</p>' +
+      '</div>' +
+      '<div class="item-actions">' +
+        (r.status === 'pending' || r.status === 'more-info'
+          ? '<button class="btn btn--sm" type="button" data-action="withdraw-request" data-id="' + h(g.id) + '">Withdraw</button>'
+          : '') +
+        '<a class="btn btn--sm" href="group.html?id=' + h(g.id) + '">View</a>' +
       '</div></article>';
   }
 
@@ -1749,6 +1868,12 @@ LIF.dashboardPage = (function () {
 
     'open-theme': function () { LIF.theme.open(); },
 
+    'withdraw-request': function (el) {
+      LIF.groups.withdrawRequest(el.dataset.id);
+      U.showToast('Request withdrawn. Nothing is kept beyond the audit record.');
+      refreshAll();
+    },
+
     'pending': function (el) { pending(el.dataset.label || 'That action'); }
   };
 
@@ -1891,6 +2016,7 @@ LIF.dashboardPage = (function () {
        the events store and fires this. The dashboard is a view of that
        store, so it simply re-reads rather than trying to patch itself. */
     document.addEventListener('lif:eventschange', U.debounce(function () { refreshAll(); }, 60));
+    document.addEventListener('lif:groupschange', U.debounce(function () { refreshAll(); }, 60));
     document.addEventListener('lif:themechange', function () {
       if (view.drawerMode === 'customize') refreshDetail();
     });
