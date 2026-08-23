@@ -30,6 +30,11 @@ LIF.app = (function () {
       '<div class="event-card-meta">' + U.escapeHtml(U.formatDateRange(evt.start)) + '</div>' +
       '<div class="event-card-summary">' + U.escapeHtml(summary) + '</div>' +
       '<div class="event-card-tags"><span class="badge">' + labelForFormat(evt.format) + '</span>' +
+      /* A cancelled or already-held event still belongs on the hub -
+         someone looking for it deserves to find out what happened
+         rather than find nothing. It just has to say so. */
+      (evt.status !== 'active' ? '<span class="badge">' + U.escapeHtml(LIF.events.statusMeta(evt.status).name) + '</span>' : '') +
+      (evt.access === 'private' ? '<span class="badge badge--lock">Invite only</span>' : '') +
       (locked ? '<span class="badge badge--lock">Members only</span>' : '') + '</div>' +
       '</div>';
   }

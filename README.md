@@ -1,13 +1,16 @@
 # LiF Hub — frontend prototype
 
 A frontend-only build of the LiF Interactive Engagement Hub: an events map, a master calendar,
-directories for People / Groups / Organizations / Opportunities, a personal dashboard, and a
+directories for People / Groups / Organizations / Opportunities, a personal dashboard, the full
+events and gatherings pathway (§6), a per-member theme drawn from the chakra palette (§7), and a
 "More Features" panel so each member can build their own minimal-to-full view of the hub.
 
-Everything that needs a real server (register for an event, sign in, connect with someone, join a
-group, edit a profile) is wired to a single obvious placeholder for now. Everything that doesn't
-need a server (map, filters, calendar, adding an event to your own calendar, sharing an event
-link) is fully working today.
+Everything that needs a real server (sign in, connect with someone, join a group, edit a profile)
+is wired to a single obvious placeholder for now. Everything that doesn't need a server is fully
+working today — the map, the filters, the calendar, add-to-calendar and share links, the theme
+picker, and the whole events pathway from proposing a gathering through registering for one to
+the recordings afterwards. The events pathway keeps its state in one small store, and writes the
+emails it cannot send to a visible outbox rather than pretending they went out (§6.7).
 
 ---
 
@@ -19,6 +22,7 @@ Paste these straight into a VS Code project with this layout:
 lif-hub/
 ├── index.html              ← the events hub — map, calendar, directories
 ├── dashboard.html          ← the personal dashboard (see §5) — where a signed-in member lands
+├── event.html              ← one event's own page (see §6) — where every register link lands
 ├── login.html              ← sign in with a one-time code
 ├── register.html           ← sign up
 ├── package.json            ← optional, just gives you `npm start`
@@ -26,26 +30,34 @@ lif-hub/
 ├── css/
 │   ├── theme.css            ← colors, fonts, spacing (design tokens only)
 │   ├── main.css             ← layout & every component's styling
-│   └── dashboard.css        ← the dashboard page's own stylesheet
+│   ├── dashboard.css        ← the dashboard page's own stylesheet
+│   ├── events.css           ← the events pathway: proposal wizard, registration, event page
+│   └── palette.css          ← the chakra palette + the theme picker (see §7) — loaded LAST
 └── js/
+    ├── theme.js              ← the theme engine + picker. Loaded in <head>, before anything paints
     ├── data.js               ← ALL sample content lives here (see §4) — this is what you swap for real API calls
     ├── state.js               ← one shared object: current view, active filters, feature toggles
     ├── utils.js                ← DOM helpers, date formatting, distance math, the backend-placeholder pattern
-    ├── map.js                  ← Leaflet map + event pins
-    ├── filters.js               ← the aspect wheel + full filter drawer + the filtering logic itself
-    ├── eventDetail.js            ← the event detail modal
-    ├── dashboard.js                ← personal dashboard sidebar
-    ├── directory.js                 ← People / Groups / Organizations / Opportunities grids
-    ├── calendarView.js               ← FullCalendar wrapper
-    ├── customize.js                   ← the "More Features" panel
-    ├── app.js                          ← wires it all together — loaded last
-    ├── dashboardData.js                 ← the signed-in member + resources, commons, notifications
-    └── dashboardPage.js                  ← the whole personal dashboard (its own page, own shell)
+    ├── eventsModel.js           ← the events domain: taxonomies, statuses, the store, LIF.events
+    ├── map.js                    ← Leaflet map + event pins
+    ├── filters.js                 ← the aspect wheel + full filter drawer + the filtering logic itself
+    ├── eventDetail.js              ← the event quick-look modal on the hub
+    ├── eventProposal.js             ← the proposal pathway + the invitation builder
+    ├── eventRegistration.js          ← registration, payment step, confirmation, calendar links
+    ├── eventPage.js                   ← event.html — details, register, post-event, host tools
+    ├── hubEvents.js                    ← the hub's hover preview and the #propose deep link
+    ├── dashboard.js                     ← personal dashboard sidebar
+    ├── directory.js                      ← People / Groups / Organizations / Opportunities grids
+    ├── calendarView.js                    ← FullCalendar wrapper
+    ├── customize.js                        ← the "More Features" panel
+    ├── app.js                               ← wires the hub together — loaded last
+    ├── dashboardData.js                      ← the signed-in member + resources, commons, notifications
+    └── dashboardPage.js                       ← the whole personal dashboard (its own page, own shell)
 ```
 
-`dashboard.html` loads only four of these — `data.js`, `dashboardData.js`, `utils.js`,
-`dashboardPage.js` — so the dashboard and the events hub share their data and helpers but
-nothing else. Neither page can break the other's layout.
+The three pages share `data.js`, `utils.js`, `theme.js` and the whole events pathway, and nothing
+else — `dashboard.html` never loads the hub's layout code, `index.html` never loads the
+dashboard's. No page can break another's layout.
 
 No `src/`, no build output folder, no `node_modules` to commit — there's nothing to compile.
 
@@ -88,9 +100,9 @@ the untested new major version. 6.1.21 is the last release of the older, better-
 which felt like the safer choice for a team building fast without time to debug an unfamiliar
 major version mid-sprint. Worth revisiting once v7 has more real-world track record.
 
-**Chakra palette — top row only.** Every color in `css/theme.css` is the first-row hex you sent;
-none of the "-2" rows were used. If you finalize those later, that file is the only place they
-need to change — every component references the named variables, never raw hex.
+**Chakra palette — now the whole sheet, and the member picks.** `css/theme.css` still holds the
+logo-sampled defaults, but every swatch on the palette sheet (both rows, all seven families) is
+now transcribed in `css/palette.css` and offered to the member through a theme picker. See §7.
 
 **Aspects mapped to chakras.** The framework doc's 7 Aspects and the palette's 7 chakras are
 paired in `js/data.js` (`LIF.ASPECTS`) in the order both were listed. That pairing is a judgment
@@ -221,7 +233,174 @@ Worth flagging for whoever wires the real thing: the spec asks that **static tem
 group invitations — get translated too**, and a client-side translation widget alone won't do
 that. It needs to happen server-side, at the point those templates are rendered.
 
-## 6. Known simplifications (fine for a first pass, worth knowing about)
+## 6. Events and gatherings — the whole pathway
+
+This is the events spec built end to end: propose → invitation → review → pending → active →
+register → attend → recordings and follow-up → repeat. Five files carry it, and they are layered
+so the domain has no idea a UI exists.
+
+### 6.1 The shape of it
+
+| File | What it owns |
+|---|---|
+| `js/eventsModel.js` | The taxonomies the proposal form asks for, the fields every event carries, and `LIF.events` — the whole domain API. No DOM in this file at all. |
+| `js/eventProposal.js` | The proposal pathway and the invitation builder. |
+| `js/eventRegistration.js` | Registration, the payment step, the confirmation, and `LIF.calendarLinks`. |
+| `js/eventPage.js` + `event.html` | One event's own page, in whichever of its four states it is in, plus the host's tools. |
+| `js/hubEvents.js` | The hub's hover preview, and `#propose` as a deep link. |
+
+**Everything a member does lives in one place**: `LIF.eventStore`, a localStorage-backed object
+with a three-function surface — `read()`, `write()`, `queue()`. Registrations, RSVPs, drafts,
+proposals, notify-me requests and the discussion threads all sit in it. Swap those three functions
+for API calls and every screen follows, because no screen touches localStorage itself.
+
+### 6.2 The proposal pathway
+
+`Propose an event` sits in the header on all three pages. It opens on a welcome screen that greets
+the member by their **preferred name** and asks the spec's question: form, or interactive pathway?
+
+Those are **two renderers over one field definition** — the `FIELDS` array near the top of
+`eventProposal.js`. That was the main design decision here. Every question in the spec appears
+once, with its label, its spoken-aloud phrasing for the guided path, its help prompt, its
+validation and its place in the review summary. Two hand-maintained copies of a 21-question form
+would have drifted within a week.
+
+- **Form** — everything at once, grouped into seven sections.
+- **Guided** — one question at a time, with the form building itself in a sidebar. Every answered
+  line is clickable to go back to it. Switching between the two modes mid-way keeps every answer.
+
+Dependent fields appear only when they apply: a subsector dropdown once you pick a sector (plus
+"suggest a new subsector" and an "Other" box), a location block for in-person and hybrid, a
+sliding-scale range once you choose sliding scale, an invite-list question once you choose private,
+a recording-access dropdown once you say you will record. Required fields are validated with
+sentences rather than asterisks — *"In-person and hybrid events need at least a venue and a city."*
+
+A draft saves as you type and is offered back on the welcome screen next time.
+
+**Then the invitation builder.** Everything from the proposal migrates into a template. Required
+detail blocks and the registration button are locked and cannot be removed — the rest the creator
+adds and arranges: cover image, headline, opening line, body, what-to-bring, closing line, and
+which details show. Two live previews sit beside it: the full invitation, and the **event card**
+(the summary that shows on the hub, in search, and on a member's dashboard), which is separately
+editable because a good card is rarely the first 120 characters of a good description.
+
+**Submit** assigns the event ID (`LIF-YYYY-NNN`, sequential within the year), sets the status to
+Pending, and shows the spec's thank-you. The event appears immediately on the proposer's dashboard
+under **Events → Proposed** and gets its own event page, showing them exactly what a reviewer sees.
+
+### 6.3 Registration
+
+Register buttons appear on the hub modal, the event page, dashboard event cards and (in a real
+build) emails and private messages. **All of them route to the same flow**, and all of them read
+the same state — so when registration closes, every one of them says *"Registration closed"*
+rather than only the event page.
+
+The flow is: your details (prefilled from your profile, all of it overridable without touching the
+profile), then a payment step only if the event asks for money, then confirmation. Confirmation
+carries the RSVP buttons, add-to-calendar links for **Google, Outlook, Office 365, Yahoo and
+.ics**, an invite-a-friend mailto, a copy-link button, and the reminder schedule with an opt-out.
+
+Sliding scale means what it says: the slider goes to the bottom of the range and paying nothing is
+a normal outcome, not an exception the UI apologises for.
+
+### 6.4 Outstanding tasks
+
+The spec asks that event cards carry what the member still has to do. `LIF.events.tasksFor(id)`
+computes that from state rather than storing it: an unanswered RSVP, a stuck payment, an unfilled
+post-event survey, a follow-up a host has not sent. It surfaces on the event card, in the event
+page's register panel, and in the Events card's one-line peek on the dashboard.
+
+### 6.5 After the event
+
+A completed event's page carries the host's note, the recording (gated by the host's own choice —
+registered / attendees / public / private, enforced in `canSeeRecording()`), the shared resources,
+the feedback survey, a **Continue the conversation** thread, and a **Create a group from this
+event** button that hands off to the group pathway with the event ID attached.
+
+The host gets a composer for all of it: a note, tick boxes for what to include, who receives it,
+and a reply-to line that defaults to their own address — so replies reach the host and not the LiF
+Events inbox.
+
+### 6.6 Repeating an event
+
+From the host tools: new dates, same content. It keeps the series ID with `-N` appended
+(`LIF-201` → `LIF-201-2`), resets the registration count, and skips the proposal process entirely,
+which is the whole point. `evt-002-2` in the sample data is a repeat that already exists, so you
+can see what one looks like before making one.
+
+### 6.7 What is queued rather than sent
+
+The spec's pathway has real server-side legs: a confirmation email, a private message, a Google
+Workspace proposal repository, the LiF Events group notification, 24-hour and 1-hour reminders, the
+post-event follow-up. None of those can exist in a frontend build.
+
+Rather than mime them, **every one is written to an outbox** (`LIF.eventStore.outbox()`) with its
+kind, its recipient, its subject, its template and — for reminders — the exact time it should fire.
+The proposal's thank-you screen and the registration confirmation both show you the queue. That
+makes the wiring visible and testable now, and gives whoever builds the mail service a list to read
+rather than a spec to re-derive.
+
+### 6.8 The five sample events added for this
+
+The nine originals were all upcoming, public and open, which left four of the five statuses with
+nothing to demonstrate. `eventsModel.js` adds five more so every state in the spec is visible in
+one session:
+
+| Event | Demonstrates |
+|---|---|
+| `evt-201` Water Justice Listening Session | **Complete**, hosted by the demo member, with the whole post-event pathway filled in: recording, host note, resources, survey, thread. |
+| `evt-202` Deep Adaptation Summit | **Registration closed** and full, multi-day (three sessions), sliding scale. The "tell me if it reopens" path. |
+| `evt-203` Watershed Stewards Winter Planning | **Private / invite only**. Visible because the demo member is on the invitation list; invisible to anyone else. |
+| `evt-204` Compassionate Listening Practicum | **Cancelled** for not reaching its minimum — the exact case the proposal form asks about. |
+| `evt-002-2` Money as Love (October) | A **repeat**: same series, same content, new dates, `-2` on the ID. |
+
+---
+
+## 7. Choose your own theme
+
+Every member picks their own colour from the LiF chakra palette, and the whole playground re-tunes
+to it — buttons, links, focus rings, highlights, badges, the paper underneath, the ambient wash
+behind the page. It changes only their own view and reverts in one click.
+
+**How it works.** Every stylesheet in this project already referenced named tokens rather than raw
+hex, so a theme is nothing more than a set of values written onto `document.documentElement`. No
+component knows the theme system exists, and the theme system knows about no component.
+
+**What the picker offers:**
+
+- **The palette sheet, transcribed** — seven families, both rows, six shades each, laid out the way
+  the palette document is. Plus **LiF House**, the logo's own purple and gold, so "put it back" is
+  one click. Every swatch is live: click and the page changes under you.
+- **Paper** — Cream (what the hub shipped with), Ivory, Cool, and **Deep**, a genuine dark ground.
+- **Tint the paper to match** — pulls a trace of the chosen colour into every neutral, so the theme
+  reads as one room rather than one coloured button.
+
+**Details that matter:**
+
+- `js/theme.js` is loaded in `<head>` and applies synchronously, so a member who chose Crown never
+  sees a flash of purple before their own colour arrives.
+- Text on the accent is chosen by **WCAG relative luminance**, not by guessing — pick the lightest
+  swatch in a family and the button text goes dark automatically.
+- On the Deep ground, a very dark swatch would disappear, so the pick shifts up the ramp. The
+  member's choice of family is honoured either way.
+- `color-scheme` is set alongside, which is the difference between a dark theme and a dark theme
+  with white dropdowns punched through it.
+- **The seven Aspect colours never change.** A map pin's colour is how the map tells you which
+  Aspect an event belongs to; re-tinting those would make it lie. The picker says so, and shows
+  them.
+
+**The one thing to know before editing:** `css/palette.css` must load **after** `main.css` and
+`dashboard.css`. Both of those still carried a handful of literal cream/gold values from before
+themes existed; rather than edit two working stylesheets, palette.css re-points exactly those rules
+at tokens. It is the whole diff, in one file.
+
+The choice persists to `localStorage` under `lif.theme.v1`. When accounts are real this belongs on
+the profile record as a `theme` field so it follows the member across devices — swap `read()` and
+`write()` in `theme.js` and nothing else changes.
+
+---
+
+## 8. Known simplifications (fine for a first pass, worth knowing about)
 
 - **The dashboard uses a hardcoded demo member** — `LIF.MEMBER` in `js/dashboardData.js`, labeled
   "sample profile" in the UI. There's no real session yet; that object is exactly the shape your
@@ -236,12 +415,26 @@ that. It needs to happen server-side, at the point those templates are rendered.
 - **Filters live on the Events tab.** The calendar view reads the same filtered results, but the
   filter controls themselves only appear while you're on Events — switch there to change what's
   filtered, then flip back to Calendar.
+- **The proposal review step is not a real review.** Submitting sets the status to Pending and
+  files the notifications in the outbox; nothing moves it to Active, because that is a steward's
+  decision made in Google Workspace. To see an Active event, use one of the samples.
+- **Editing an active event is still a placeholder.** The edit form should reuse the proposal
+  fields — the pathway is built, it just needs a backend that can accept a change and notify
+  everyone registered. Cancelling an event, by contrast, works.
+- **Group creation from an event names the handoff but does not make the group.** The Group
+  Proposal pathway is the next one to build; the button already carries the event ID it should be
+  linked to.
+- **The payment step records an amount, it does not take money.** It marks the registration
+  `recorded` and says on screen that the LiF payment apps take over from there.
+- **A cover image uploaded in the proposal is held as a data URL** in localStorage, which is fine
+  for a prototype and wrong for production — large images will blow the storage quota. Point it at
+  your media upload endpoint when there is one.
 - **No drag-and-drop card ordering.** The dashboard offers three fixed layouts and per-feature
   on/off switches, matching what the team landed on, rather than free-form dragging. Cards fill the
   constellation ring in registry order; hiding one closes the ring up rather than leaving a hole.
   If free ordering is wanted later, it's one array of keys on `MEMBER.dashboard` plus a sort.
 
-## 7. Libraries used (all via CDN, no install needed)
+## 9. Libraries used (all via CDN, no install needed)
 
 | Library | Version | Why |
 |---|---|---|

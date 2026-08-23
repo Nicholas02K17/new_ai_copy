@@ -14,6 +14,13 @@
 
 <link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/main.css">
+<link rel="stylesheet" href="css/events.css">
+<link rel="stylesheet" href="css/palette.css">
+
+<!-- Loaded in <head> deliberately: theme.js writes the member's chosen
+     colours onto :root the moment it parses, so a themed member never
+     sees a flash of the default palette before the page paints. -->
+<script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -44,6 +51,10 @@
       <button class="pill-btn" id="moreFeaturesBtn" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"></circle><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"></circle><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"></circle></svg>
         More Features
+      </button>
+      <button class="pill-btn" type="button" data-propose-event>Propose an event</button>
+      <button class="icon-btn" type="button" data-theme-open aria-label="Choose your theme" title="Choose your theme">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 000 18 4.5 4.5 0 000-9 4.5 4.5 0 010-9z"></path></svg>
       </button>
       <a class="pill-btn" href="dashboard.html" id="myDashboardLink">My Dashboard</a>
       <button class="pill-btn pill-btn--accent" id="loginBtn" type="button">Log In</button>
@@ -145,6 +156,7 @@
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/eventsModel.js"></script>
 <script src="js/map.js"></script>
 <script src="js/filters.js"></script>
 <script src="js/eventDetail.js"></script>
@@ -152,6 +164,9 @@
 <script src="js/directory.js"></script>
 <script src="js/calendarView.js"></script>
 <script src="js/customize.js"></script>
+<script src="js/eventProposal.js"></script>
+<script src="js/eventRegistration.js"></script>
+<script src="js/hubEvents.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

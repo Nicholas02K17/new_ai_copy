@@ -19,27 +19,10 @@
 
 window.LIF = window.LIF || {};
 
-/* ---------------------------------------------------------------
- * Subsectors, keyed by the sector ids already in data.js.
- * This is the full tree from the profile spec - the profile's
- * Subsector dropdown is driven entirely by whichever Sector the
- * member picked, plus a free-text "request a new subsector" box
- * for anything missing.
- * ------------------------------------------------------------- */
-LIF.SUBSECTORS = {
-  spirituality:   ['Personal evolution', 'Universal evolution', 'Spirituality', 'Individual Faiths', 'Interfaith'],
-  science:        ['Evolutionary', 'Quantum physics', 'Interdisciplinary', 'Neuroscience'],
-  relations:      ['Conflict Management', 'Peace Education', 'Social Responsibility', 'Solidarity', 'No nuclear weapons', 'Women and girls', 'Men and boys', 'LGBTQIA+', 'Partnership', 'Youth'],
-  media:          ['New news', 'Caring & Authentic', 'Transformative'],
-  justice:        ['Restorative justice', 'Prison reform', 'Environmental', 'Human rights', 'Race', 'Refugee rights', 'Equity, Diversity, Inclusion', 'Animal rights'],
-  infrastructure: ['Information', 'Physical', 'Mobility', 'Recycling'],
-  health:         ['Healthy living', 'Integrative', 'Children', 'Neurodiversity', 'Mental', 'Trauma', 'Women’s', 'Palliative Care'],
-  governance:     ['Bio-regional planning', 'Community governance', 'Global governance', 'Community initiatives', 'Homelessness', 'Food scarcity', 'Human trafficking', 'Public policy', 'Urban design', 'Social work', 'Welfare', 'Community service', 'Government services', 'Relief', 'NGOs'],
-  environment:    ['Climate', 'Energy', 'Plant-based diet', 'Greenbuilding', 'Population', 'Regenerative', 'Planetary boundaries', 'Water'],
-  education:      ['Parents before birth', 'Toddler/Parenting', 'Pre-School', 'Elementary school', 'Secondary school', 'Post secondary education', 'Adult, transformative education', 'Alternative', 'Non-Schooling'],
-  economics:      ['Caring business', 'Caring economy', 'Compassionate listening', 'Gratitude', 'Leadership', 'Responsibility', 'Symbiotic economy', 'Global solutions'],
-  arts:           ['Public', 'Performance', 'Multimedia']
-};
+/* Subsectors used to live here. They moved to data.js when the event
+ * proposal form (js/eventProposal.js) needed the same tree on the
+ * public hub, which does not load this file. One taxonomy, one home.
+ */
 
 /* Languages the platform itself can be displayed in. The selector in
  * the dashboard header is the same "preferred language" the sign-up

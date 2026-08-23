@@ -35,15 +35,30 @@ LIF.eventDetail = (function () {
     badges.push('<span class="badge">' + labelFor(LIF.FORMATS, evt.format) + '</span>');
     if (!gated) badges.push('<span class="badge">' + labelFor(LIF.EVENT_TYPES, evt.type) + '</span>');
     if (gated) badges.push('<span class="badge badge--lock">Members only \u00B7 ' + U.escapeHtml(evt.host) + '</span>');
+    if (evt.status !== 'active') badges.push('<span class="badge">' + U.escapeHtml(LIF.events.statusMeta(evt.status).name) + '</span>');
+    if (evt.access === 'private') badges.push('<span class="badge badge--lock">Invitation only</span>');
     return badges.join('');
   }
 
-  function buildActions(gated) {
+  /* The register button reflects the event's real state rather than
+     always saying "Register": the spec asks that once registration
+     closes, EVERY button everywhere says so - cards, emails, old
+     notifications - not just the event page. */
+  function buildActions(evt, gated) {
     if (gated) {
       return '<button class="btn-primary" data-action="signin">Sign in</button>' +
         '<button class="btn-secondary" data-action="close">Close</button>';
     }
-    return '<button class="btn-primary" data-action="register">Register</button>' +
+    var st = LIF.events.registrationState(evt);
+    var primary = st.canRegister
+      ? '<button class="btn-primary" data-action="register">Register' +
+        (evt.payment.model !== 'free' ? ' \u00B7 ' + U.escapeHtml(LIF.events.paymentLabel(evt)) : '') + '</button>'
+      : st.code === 'registered'
+        ? '<button class="btn-primary" data-action="register">Manage my registration</button>'
+        : '<button class="btn-primary" data-action="closed">' + U.escapeHtml(st.label) + '</button>';
+
+    return primary +
+      '<a class="btn-secondary" href="event.html?id=' + evt.id + '">Full event page</a>' +
       '<button class="btn-secondary" data-action="gcal">Add to Google Calendar</button>' +
       '<button class="btn-secondary" data-action="ics">Download .ics</button>' +
       '<button class="btn-secondary" data-action="invite">Invite a friend</button>' +
@@ -80,9 +95,16 @@ LIF.eventDetail = (function () {
     } else {
       body += '<p class="modal-description">' + U.escapeHtml(evt.description) + '</p>';
       body += '<div class="modal-capacity">' + evt.registered + ' / ' + evt.capacity + ' registered' + (evt.onlineLink ? ' \u00B7 join link sent after registering' : '') + '</div>';
+      body += metaRow('Recording', evt.recording.mode === 'recorded'
+        ? 'Recorded \u00B7 shared with ' + labelFor(LIF.RECORDING_ACCESS, evt.recording.access).toLowerCase()
+        : 'Live only, not recorded');
+      var state = LIF.events.registrationState(evt);
+      if (!state.canRegister && state.why) {
+        body += '<div class="modal-gate">' + U.escapeHtml(state.why) + '</div>';
+      }
     }
 
-    body += '<div class="modal-actions">' + buildActions(gated) + '</div>';
+    body += '<div class="modal-actions">' + buildActions(evt, gated) + '</div>';
 
     U.$('#eventModal .modal-body').innerHTML = body;
     bindActions(evt);
@@ -94,7 +116,8 @@ LIF.eventDetail = (function () {
       var btn = e.target.closest('[data-action]');
       if (!btn) return;
       var action = btn.dataset.action;
-      if (action === 'register') U.backendPlaceholder('Registering for "' + evt.title + '"');
+      if (action === 'register') { close(); LIF.eventRegistration.open(evt.id); }
+      else if (action === 'closed') U.showToast('Registration for this one is closed.');
       else if (action === 'signin') U.backendPlaceholder('Signing in');
       else if (action === 'close') close();
       else if (action === 'gcal') window.open(U.buildGoogleCalendarUrl(evt), '_blank', 'noopener');

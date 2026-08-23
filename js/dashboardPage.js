@@ -272,10 +272,11 @@ LIF.dashboardPage = (function () {
         { n: M.sectors.length, label: 'Sectors' }
       ];
       case 'events': return [
-        { n: M.events.registered.length, label: 'Registered' },
+        { n: registeredEvents().length, label: 'Registered' },
         { n: M.events.bookmarked.length, label: 'Bookmarked' },
         { n: suggestedEvents().length, label: 'Suggested' },
-        { n: updatedEvents().length, label: 'New', isNew: true }
+        { n: updatedEvents().length, label: 'New', isNew: true },
+        { n: eventTasks().length, label: 'To do', isNew: eventTasks().length > 0 }
       ];
       case 'groups': return [
         { n: M.groups.registered.length, label: 'Joined' },
@@ -325,6 +326,11 @@ LIF.dashboardPage = (function () {
         return hidden + ' field' + (hidden === 1 ? '' : 's') + ' kept private · <b>' + h(M.preferredLanguage.toUpperCase()) + '</b> interface';
       }
       case 'events': {
+        var todo = eventTasks();
+        if (todo.length) {
+          return '<b>' + todo.length + ' thing' + (todo.length === 1 ? '' : 's') + ' waiting on you</b> — ' +
+            h(todo[0].task.label.toLowerCase()) + ' for ' + h(todo[0].event.title);
+        }
         var next = nextEvent();
         return next ? 'Next up: <b>' + h(next.title) + '</b>, ' + h(relTime(next.start)) : 'Nothing on your calendar yet.';
       }
@@ -357,9 +363,50 @@ LIF.dashboardPage = (function () {
     }
   }
 
+  /* =========================================================
+   * 3b. EVENTS, RECONCILED
+   * Two things claim to know what this member is registered for:
+   * the profile record (M.events.registered) and the events store
+   * (which is what the registration flow actually writes to). They
+   * are merged here, once, so no panel can disagree with the event
+   * page about the same fact.
+   * ======================================================= */
+  function registeredEvents() {
+    var ids = M.events.registered.slice();
+    LIF.events.myRegistrations().forEach(function (r) {
+      if (ids.indexOf(r.event.id) === -1) ids.push(r.event.id);
+    });
+    return ids.map(U.getEvent).filter(Boolean)
+      .sort(function (a, b) { return ts(a.start) - ts(b.start); });
+  }
+
+  /** Events this member is hosting, whatever their status. */
+  function hostedEvents() {
+    return LIF.EVENTS.filter(function (e) { return LIF.events.isHost(e); })
+      .sort(function (a, b) { return ts(b.start) - ts(a.start); });
+  }
+
+  /** Proposals: the two hand-written samples plus anything really
+      submitted through the proposal pathway this session. */
+  function myProposals() {
+    var out = M.events.proposed.map(function (id) { return LIF.PROPOSALS[id]; }).filter(Boolean);
+    LIF.events.proposals().forEach(function (p) {
+      if (!out.some(function (x) { return x.id === p.id; })) out.push(p);
+    });
+    LIF.events.drafts().forEach(function (p) {
+      if (p.title) out.push(Object.assign({}, p, { status: 'Draft' }));
+    });
+    return out;
+  }
+
+  /** Everything still waiting on this member across all events. */
+  function eventTasks() { return LIF.events.allTasks(); }
+
   function nextEvent() {
-    return M.events.registered.map(U.getEvent).filter(Boolean)
-      .sort(function (a, b) { return ts(a.start) - ts(b.start); })[0];
+    var now = Date.now();
+    return registeredEvents().filter(function (e) {
+      return e.status === 'active' && ts(e.end || e.start) >= now;
+    })[0] || registeredEvents()[0];
   }
 
   function unreadNotifications() {
@@ -609,7 +656,7 @@ LIF.dashboardPage = (function () {
    * ======================================================= */
   var TABS = {
     profile:       [['details', 'Details'], ['interests', 'Interests'], ['preferences', 'Preferences'], ['privacy', 'Privacy']],
-    events:        [['registered', 'Registered'], ['bookmarked', 'Bookmarked'], ['suggested', 'Suggested'], ['updated', 'Updated'], ['proposed', 'Proposed'], ['calendar', 'My calendar']],
+    events:        [['registered', 'Registered'], ['bookmarked', 'Bookmarked'], ['suggested', 'Suggested'], ['updated', 'Updated'], ['hosting', 'Hosting'], ['proposed', 'Proposed'], ['calendar', 'My calendar']],
     groups:        [['registered', 'Joined'], ['bookmarked', 'Bookmarked'], ['suggested', 'Suggested'], ['updated', 'Updated'], ['proposed', 'Proposed']],
     connections:   [['playmates', 'Playmates'], ['requests', 'Requests'], ['suggested', 'Suggested'], ['activity', 'Activity']],
     commons:       [['tending', 'Tending'], ['explore', 'Explore']],
@@ -645,11 +692,12 @@ LIF.dashboardPage = (function () {
   /* The single source of truth for "what is in this tab". */
   function dataFor(key, tab) {
     switch (key + ':' + tab) {
-      case 'events:registered': return M.events.registered.map(U.getEvent).filter(Boolean);
+      case 'events:registered': return registeredEvents();
+      case 'events:hosting':    return hostedEvents();
       case 'events:bookmarked': return M.events.bookmarked.map(U.getEvent).filter(Boolean);
       case 'events:suggested':  return suggestedEvents();
       case 'events:updated':    return updatedEvents();
-      case 'events:proposed':   return M.events.proposed.map(function (id) { return LIF.PROPOSALS[id]; }).filter(Boolean);
+      case 'events:proposed':   return myProposals();
       case 'groups:registered': return M.groups.registered.map(getGroup).filter(Boolean);
       case 'groups:bookmarked': return M.groups.bookmarked.map(getGroup).filter(Boolean);
       case 'groups:suggested':  return suggestedGroups();
@@ -684,7 +732,9 @@ LIF.dashboardPage = (function () {
         '<span class="fc-icon">' + svg(key) + '</span>' +
         '<div><h2 class="detail-title">' + h(f.name) + '</h2>' +
         '<p class="detail-desc">' + h(BLURBS[key]) + '</p></div>' +
-        '<div class="detail-head-actions">' + bellHtml(key) +
+        '<div class="detail-head-actions">' +
+          (key === 'events' ? '<button class="btn btn--sm btn--gold" type="button" data-propose-event>Propose an event</button>' : '') +
+          bellHtml(key) +
           (view.drawerMode ? '<button class="icon-btn" data-action="close-drawer" type="button" aria-label="Close">' + svg('close') + '</button>' : '') +
         '</div>' +
       '</div>' +
@@ -727,6 +777,7 @@ LIF.dashboardPage = (function () {
       'events:suggested':  ['No matches right now', 'Widen your radius or add a sector, and suggestions will appear.'],
       'events:updated':    ['Nothing has changed', 'Updates to events you follow will collect here between visits.'],
       'events:proposed':   ['You have not proposed an event', 'Anyone can propose one. A steward reviews it before it goes live.'],
+      'events:hosting':    ['You are not hosting anything yet', 'Propose a gathering and it appears here from the moment you submit it.'],
       'groups:updated':    ['No group news', 'Changes in circles you follow will show up here.'],
       'connections:requests': ['No pending requests', 'Connection requests from other members appear here.'],
       'connections:activity': ['Activity sharing is off', 'Turn on "receive activity updates" in Privacy to see what your playmates are up to.']
@@ -774,6 +825,9 @@ LIF.dashboardPage = (function () {
       'title="' + (on ? 'Saved' : 'Save for later') + '" aria-label="' + (on ? 'Remove bookmark' : 'Bookmark') + '">' + svg('bookmark') + '</button>';
   }
 
+  /* The event card the spec describes: what it is, where you stand
+     with it, and - the part that makes it a card rather than a list
+     item - whatever is still waiting on you. */
   function eventRow(evt, why, tab) {
     var aspect = U.getAspect(evt.aspect);
     var sector = U.getSector(evt.sector);
@@ -781,24 +835,52 @@ LIF.dashboardPage = (function () {
     var km = evt.location ? kmFromMember(evt.location.lat, evt.location.lng) : null;
     var isNew = ts(evt.updatedAt) > lastVisitTs();
     var locked = evt.visibility === 'organization';
+
+    var st = LIF.events.registrationState(evt);
+    var reg = LIF.events.registrationFor(evt.id);
+    var tasks = LIF.events.tasksFor(evt.id);
+    var attendable = LIF.events.isAttendable(evt) && reg;
+
     return '<article class="item-row">' +
       '<span class="item-mark" style="--mark:var(--a-' + aspectKey(aspect) + ')"></span>' +
       '<div class="item-main">' +
         '<div class="item-title">' + h(evt.title) +
+          (evt.status !== 'active' ? ' <span class="badge badge--status-' + h(evt.status) + '">' +
+            h(LIF.events.statusMeta(evt.status).name) + '</span>' : '') +
           (isNew && tab !== 'updated' ? ' <span class="badge badge--new">updated</span>' : '') +
-          (locked ? ' <span class="badge badge--lock">' + svg('lock') + ' members only</span>' : '') + '</div>' +
+          (locked ? ' <span class="badge badge--lock">' + svg('lock') + ' members only</span>' : '') +
+          (evt.access === 'private' ? ' <span class="badge badge--lock">invite only</span>' : '') + '</div>' +
         '<div class="item-meta">' +
           '<span class="mono">' + h(U.formatDateRange(evt.start, evt.end)) + '</span>' +
           '<span>' + h(where) + (km != null ? ' · ' + Math.round(km) + ' km' : '') + '</span>' +
           '<span class="badge">' + h(evt.format) + '</span>' +
           (sector ? '<span class="badge badge--feat">' + h(sector.name) + '</span>' : '') +
-          (evt.cost ? '<span class="badge">' + h(evt.cost) + '</span>' : '') +
+          '<span class="badge">' + h(LIF.events.paymentLabel(evt)) + '</span>' +
+          (reg && reg.rsvp ? '<span class="badge badge--live">RSVP ' + h(reg.rsvp.replace('-', ' ')) + '</span>' : '') +
         '</div>' +
         '<p class="item-summary">' + h(evt.summary) + '</p>' +
         whyHtml(why) +
+        (tasks.length
+          ? '<div class="item-todo">' + svg('spark') + '<span>Waiting on you:</span>' + tasks.map(function (t) {
+              return '<button class="item-todo-btn" type="button" data-action="event-task" ' +
+                'data-id="' + h(evt.id) + '" data-task="' + h(t.action) + '">' + h(t.label) + '</button>';
+            }).join('') + '</div>'
+          : '') +
+        (evt.status === 'complete' && LIF.events.canSeeRecording(evt)
+          ? '<div class="item-todo item-todo--calm">' + svg('spark') +
+            '<a class="item-todo-btn" href="' + h(evt.postEvent.recordingUrl) + '" target="_blank" rel="noopener">Watch the recording</a>' +
+            '<a class="item-todo-btn" href="event.html?id=' + h(evt.id) + '">Continue the conversation</a></div>'
+          : '') +
       '</div>' +
       '<div class="item-actions">' + bookmarkBtn('event', evt.id) + muteBtn(evt.id) +
-        '<button class="btn btn--sm" data-action="pending" data-label="Opening ' + h(evt.title) + '" type="button">Open</button>' +
+        (attendable
+          ? '<a class="btn btn--sm btn--gold" href="' + h(evt.onlineLink || '#') + '" target="_blank" rel="noopener">Attend</a>'
+          : st.canRegister
+            ? '<button class="btn btn--sm btn--gold" type="button" data-register-event="' + h(evt.id) + '">Register</button>'
+            : st.code === 'registered'
+              ? '<span class="badge badge--live">registered</span>'
+              : '<span class="badge">' + h(st.label) + '</span>') +
+        '<a class="btn btn--sm" href="event.html?id=' + h(evt.id) + '">Event page</a>' +
       '</div></article>';
   }
 
@@ -896,17 +978,39 @@ LIF.dashboardPage = (function () {
       '</div></article>';
   }
 
+  /* Two shapes land here: the two hand-written sample proposals in
+     dashboardData.js, and anything really submitted through the
+     proposal pathway, which carries a system-assigned event ID.
+     One renderer, branching on which. */
   function proposalRow(p) {
-    var warn = p.status !== 'In review';
+    var real = !!p.eventId;
+    var status = real ? (p.status === 'Draft' ? 'Draft' : 'Pending') : p.status;
+    var when = p.submittedAt || p.submitted || p.updatedAt;
+    var evtId = real ? 'evt-' + String(p.eventId).toLowerCase().replace(/[^a-z0-9]+/g, '-') : null;
+    var note = real
+      ? (p.status === 'Draft'
+        ? 'Not submitted yet - only you can see this one.'
+        : 'With the LiF Events group. You will hear back by email, or a call if there is a lot to talk through.')
+      : p.note;
+
     return '<article class="item-row">' +
       '<span class="item-mark" style="--mark:var(--gold)"></span>' +
       '<div class="item-main">' +
-        '<div class="item-title">' + h(p.title) + ' <span class="badge ' + (warn ? 'badge--warn' : '') + '">' + h(p.status) + '</span></div>' +
-        '<div class="item-meta"><span>Proposed ' + h(p.kind) + '</span><span class="mono">submitted ' + h(relTime(p.submitted)) + '</span></div>' +
-        '<p class="item-summary">' + h(p.note) + '</p>' +
+        '<div class="item-title">' + h(p.title || 'Untitled proposal') +
+          ' <span class="badge badge--warn">' + h(status) + '</span>' +
+          (real ? ' <span class="badge mono">' + h(p.eventId) + '</span>' : '') + '</div>' +
+        '<div class="item-meta">' +
+          '<span>Proposed ' + h(p.kind || 'event') + '</span>' +
+          (when ? '<span class="mono">' + (p.status === 'Draft' ? 'saved ' : 'submitted ') + h(relTime(when)) + '</span>' : '') +
+        '</div>' +
+        '<p class="item-summary">' + h(note) + '</p>' +
       '</div>' +
       '<div class="item-actions">' +
-        '<button class="btn btn--sm" data-action="pending" data-label="Editing ' + h(p.title) + '" type="button">Edit</button>' +
+        (evtId && p.status !== 'Draft'
+          ? '<a class="btn btn--sm" href="event.html?id=' + h(evtId) + '">See it</a>'
+          : '') +
+        '<button class="btn btn--sm" data-propose-event type="button">' +
+          (p.status === 'Draft' ? 'Finish it' : 'Propose another') + '</button>' +
       '</div></article>';
   }
 
@@ -1333,6 +1437,11 @@ LIF.dashboardPage = (function () {
         '<p class="section-hint">Show only what you actually use. Everything stays searchable either way.</p>' +
         feats + '</div>' +
 
+        '<div class="section"><div class="section-head"><h4>Colour</h4></div>' +
+        '<p class="section-hint">Your own theme, drawn from the LiF chakra palette. It follows you across every ' +
+          'page of the playground, and changes nothing for anyone else.</p>' +
+        themeRow() + '</div>' +
+
         '<div class="section"><div class="section-head"><h4>Interface language</h4></div>' +
         '<p class="section-hint">Your preferred language, applied every time you sign in.</p>' +
         '<select class="select-input text-input" data-change="language">' + LIF.UI_LANGUAGES.map(function (l) {
@@ -1341,6 +1450,27 @@ LIF.dashboardPage = (function () {
 
         '<div class="section"><button class="btn" data-action="reset-dashboard" type="button">Reset to the default layout</button></div>' +
       '</div>';
+  }
+
+  /* The theme picker itself lives in js/theme.js and is shared with
+     the public hub and the event page; this is just the doorway. */
+  function themeRow() {
+    var t = LIF.theme.get();
+    var tokens = LIF.theme.tokens();
+    var fam = t.palette === 'house' ? LIF.theme.house : LIF.theme.palettes.find(function (x) { return x.id === t.palette; });
+    var paper = LIF.theme.papers.find(function (x) { return x.id === t.paper; });
+    var ramp = fam.rows[Math.min(t.row, fam.rows.length - 1)];
+
+    return '<button class="theme-row" type="button" data-action="open-theme">' +
+      '<span class="theme-row-ramp">' + ramp.map(function (hex) {
+        return '<i style="background:' + hex + '"></i>';
+      }).join('') + '</span>' +
+      '<span class="theme-row-copy">' +
+        '<strong>' + h(fam.name) + (t.row ? ' 2' : '') + ' on ' + h(paper.name.toLowerCase()) + ' paper</strong>' +
+        '<span>' + h(tokens['--accent']) + (t.tint ? ' \u00B7 paper tinted to match' : '') + '</span>' +
+      '</span>' +
+      '<span class="theme-row-go">Change</span>' +
+    '</button>';
   }
 
   /* =========================================================
@@ -1605,6 +1735,20 @@ LIF.dashboardPage = (function () {
       U.showToast('The full detail view for this opens once the backend is wired up.');
     },
 
+    /* An event card's outstanding task, acted on in place. The RSVP
+       and payment ones reopen the registration flow, which is where
+       both of those actually live. */
+    'event-task': function (el) {
+      var id = el.dataset.id, task = el.dataset.task;
+      var evt = LIF.events.get(id);
+      if (!evt) return;
+      if (task === 'rsvp' || task === 'pay') LIF.eventRegistration.open(id);
+      else if (task === 'survey' && evt.postEvent.surveyUrl) window.open(evt.postEvent.surveyUrl, '_blank', 'noopener');
+      else if (task === 'followup') location.href = 'event.html?id=' + id;
+    },
+
+    'open-theme': function () { LIF.theme.open(); },
+
     'pending': function (el) { pending(el.dataset.label || 'That action'); }
   };
 
@@ -1742,6 +1886,15 @@ LIF.dashboardPage = (function () {
     $('#langSelect').value = M.preferredLanguage;
 
     bind();
+
+    /* Registering, RSVPing or proposing anywhere in the app writes to
+       the events store and fires this. The dashboard is a view of that
+       store, so it simply re-reads rather than trying to patch itself. */
+    document.addEventListener('lif:eventschange', U.debounce(function () { refreshAll(); }, 60));
+    document.addEventListener('lif:themechange', function () {
+      if (view.drawerMode === 'customize') refreshDetail();
+    });
+
     renderBoard();
   }
 

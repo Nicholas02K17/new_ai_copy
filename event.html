@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event — LiF Playground</title>
+<meta name="description" content="Event details and registration on the LiF Playground.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/dashboard.css">
+<link rel="stylesheet" href="css/events.css">
+<link rel="stylesheet" href="css/palette.css">
+
+<!-- Loaded in <head>, on purpose: it writes the member's chosen
+     colours before the page paints, so a themed member never sees a
+     flash of the default palette first. -->
+<script src="js/theme.js"></script>
+</head>
+<body>
+
+<div class="ambient-bg" aria-hidden="true">
+  <svg class="cluster-a" viewBox="0 0 400 400" fill="none">
+    <g stroke="currentColor" stroke-width="2" style="color:var(--accent)">
+      <circle cx="200" cy="200" r="70"/><circle cx="270" cy="200" r="70"/><circle cx="235" cy="139" r="70"/>
+      <circle cx="165" cy="139" r="70"/><circle cx="130" cy="200" r="70"/><circle cx="165" cy="261" r="70"/>
+      <circle cx="235" cy="261" r="70"/>
+    </g>
+  </svg>
+</div>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <img src="temp_logo.png" alt="" width="36" height="36">
+    <span>
+      <span class="brand-word">LiF Playground</span>
+      <span class="brand-sub">Love is Foundation</span>
+    </span>
+  </a>
+
+  <nav class="ev-nav">
+    <a href="index.html">Events hub</a>
+    <a href="dashboard.html">My dashboard</a>
+  </nav>
+
+  <div class="topbar-actions">
+    <button class="btn btn--sm" type="button" data-propose-event>Propose an event</button>
+    <button class="icon-btn" type="button" data-theme-open aria-label="Choose your theme" title="Choose your theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 000 18 4.5 4.5 0 000-9 4.5 4.5 0 010-9z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main class="ev-page" id="eventPage">
+  <p class="ev-loading">Loading the event…</p>
+</main>
+
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script src="js/data.js"></script>
+<script src="js/dashboardData.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/eventsModel.js"></script>
+<script src="js/eventProposal.js"></script>
+<script src="js/eventRegistration.js"></script>
+<script src="js/eventPage.js"></script>
+</body>
+</html>

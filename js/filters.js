@@ -260,6 +260,13 @@ LIF.filters = (function () {
     var f = LIF.state.filters;
     var member = LIF.CURRENT_MEMBER;
     return LIF.EVENTS.filter(function (evt) {
+      /* Proposals awaiting review never reach the hub, and a private
+         event only shows to someone who was invited or registered.
+         Organization-gated events DO show - locked, deliberately, so
+         a non-member can see that the thing exists. */
+      if (evt.status === 'pending' || evt.status === 'draft') return false;
+      if (evt.visibility === 'private' && LIF.events && !LIF.events.canSee(evt)) return false;
+
       if (f.search) {
         var q = f.search.toLowerCase();
         var hay = (evt.title + ' ' + evt.summary + ' ' + evt.host + ' ' + (evt.tags || []).join(' ')).toLowerCase();
@@ -271,7 +278,9 @@ LIF.filters = (function () {
       if (f.types.length && f.types.indexOf(evt.type) === -1) return false;
       if (f.commitments.length && f.commitments.indexOf(evt.commitment) === -1) return false;
       if (f.costs.length && f.costs.indexOf(evt.cost) === -1) return false;
-      if (f.languages.length && f.languages.indexOf(evt.language) === -1) return false;
+      if (f.languages.length && !(evt.languages || [evt.language]).some(function (l) {
+        return f.languages.indexOf(l) !== -1;
+      })) return false;
       if (f.time.length && f.time.indexOf(U.timeOfDayBucket(evt.start)) === -1) return false;
       if (f.durations.length) {
         var bucket = durationBucketId(U.durationMinutes(evt.start, evt.end));

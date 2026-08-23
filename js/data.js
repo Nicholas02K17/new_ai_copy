@@ -61,6 +61,28 @@ LIF.SECTORS = [
   { id: 'arts',           name: 'Arts & Culture' }
 ];
 
+/* ---------------------------------------------------------------
+ * Subsectors, keyed by the sector ids already in data.js.
+ * This is the full tree from the profile spec - the profile's
+ * Subsector dropdown is driven entirely by whichever Sector the
+ * member picked, plus a free-text "request a new subsector" box
+ * for anything missing.
+ * ------------------------------------------------------------- */
+LIF.SUBSECTORS = {
+  spirituality:   ['Personal evolution', 'Universal evolution', 'Spirituality', 'Individual Faiths', 'Interfaith'],
+  science:        ['Evolutionary', 'Quantum physics', 'Interdisciplinary', 'Neuroscience'],
+  relations:      ['Conflict Management', 'Peace Education', 'Social Responsibility', 'Solidarity', 'No nuclear weapons', 'Women and girls', 'Men and boys', 'LGBTQIA+', 'Partnership', 'Youth'],
+  media:          ['New news', 'Caring & Authentic', 'Transformative'],
+  justice:        ['Restorative justice', 'Prison reform', 'Environmental', 'Human rights', 'Race', 'Refugee rights', 'Equity, Diversity, Inclusion', 'Animal rights'],
+  infrastructure: ['Information', 'Physical', 'Mobility', 'Recycling'],
+  health:         ['Healthy living', 'Integrative', 'Children', 'Neurodiversity', 'Mental', 'Trauma', 'Women’s', 'Men’s', 'Palliative Care'],
+  governance:     ['Bio-regional planning', 'Community governance', 'Global governance', 'Community initiatives', 'Homelessness', 'Food scarcity', 'Human trafficking', 'Public policy', 'Urban design', 'Social work', 'Welfare', 'Community service', 'Government services', 'Relief', 'NGOs'],
+  environment:    ['Climate', 'Energy', 'Plant-based diet', 'Greenbuilding', 'Population', 'Regenerative', 'Planetary boundaries', 'Water'],
+  education:      ['Parents before birth', 'Toddler/Parenting', 'Pre-School', 'Elementary school', 'Secondary school', 'Post secondary education', 'Adult, transformative education', 'Alternative', 'Non-Schooling'],
+  economics:      ['Caring business', 'Caring economy', 'Compassionate listening', 'Gratitude', 'Leadership', 'Responsibility', 'Symbiotic economy', 'Global solutions'],
+  arts:           ['Public', 'Performance', 'Multimedia']
+};
+
 LIF.FORMATS = [
   { id: 'in-person', name: 'In Person' },
   { id: 'online',    name: 'Online' },
@@ -399,6 +421,12 @@ LIF.OPPORTUNITIES = [
 LIF.CURRENT_MEMBER = {
   name: 'Alex Rivera',
   isDemoProfile: true,
+  /* The public hub does not load dashboardData.js, so LIF.MEMBER does
+     not exist there. The events pathway falls back to these two when
+     it needs to pre-fill a form - without them a member proposing an
+     event from the hub would see a placeholder address. */
+  preferredName: 'Alex',
+  email: 'alex.rivera@example.org',
   location: 'Portland, Oregon, USA',
   languages: ['English'],
   interestedAspects: ['engagement-communion', 'nature-nurture'],
