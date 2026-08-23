@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Log in — LiF Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS (shared with sign-up page) ============ */
+  :root{
+    --cream:        #F7F1E4;
+    --paper:        #FFFCF5;
+    --ink:          #241F17;
+    --ink-soft:     #6b6152;
+    --gold:         #C0923B;
+    --gold-soft:    #E4C878;
+    --rose:         #BD5F72;
+    --rose-soft:    #E7AEB8;
+    --sage:         #5B7A50;
+    --sage-soft:    #9FBB8E;
+
+    --radius-lg: 28px;
+    --radius-sm: 10px;
+
+    --ease-bloom: cubic-bezier(.22,1.15,.32,1);
+    --ease-out:   cubic-bezier(.19,1,.22,1);
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(1200px 700px at 12% -10%, #fbf4de 0%, transparent 60%),
+      radial-gradient(900px 600px at 110% 10%, #f3e4d2 0%, transparent 55%),
+      var(--cream);
+    color:var(--ink);
+    font-family:"Plus Jakarta Sans", system-ui, sans-serif;
+    overflow-x:hidden;
+    position:relative;
+  }
+  a{ color:inherit; }
+
+  /* ============ AMBIENT SEED-OF-LIFE BACKGROUND ============ */
+  .ambient-bg{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
+  .ambient-bg svg{ position:absolute; opacity:.16; }
+  .ambient-bg .cluster-a{ top:-140px; left:-160px; width:560px; height:560px; animation: ambientRotate 160s linear infinite; }
+  .ambient-bg .cluster-b{ bottom:-200px; right:-180px; width:640px; height:640px; animation: ambientRotate 200s linear infinite reverse; opacity:.12; }
+  .ambient-bg .blob{ position:absolute; border-radius:50%; filter:blur(60px); opacity:.35; animation: floatBlob 16s ease-in-out infinite; }
+  .blob--gold{ width:340px; height:340px; top:8%; right:6%; background:var(--gold-soft); }
+  .blob--rose{ width:280px; height:280px; bottom:6%; left:4%; background:var(--rose-soft); animation-delay:-6s; }
+  @keyframes ambientRotate{ from{ transform:rotate(0deg);} to{ transform:rotate(360deg);} }
+  @keyframes floatBlob{ 0%,100%{ transform:translate(0,0);} 50%{ transform:translate(22px,-18px);} }
+
+  /* ============ LAYOUT ============ */
+  .site-header{
+    position:relative; z-index:2;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px clamp(20px,5vw,56px);
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-logo{ width:40px; height:40px; object-fit:contain; display:block; animation: fadeUp .7s var(--ease-out) both; }
+  .brand-logo-fallback{ display:none; width:40px; height:40px; align-items:center; justify-content:center; animation: fadeUp .7s var(--ease-out) both; }
+  .brand-word{ font-family:"Fraunces", serif; font-weight:600; font-size:1.15rem; letter-spacing:.01em; animation: fadeUp .7s .05s var(--ease-out) both; }
+  .header-link{
+    text-decoration:none; font-size:.85rem; font-weight:600; color:var(--ink-soft);
+    padding:8px 16px; border:1px solid #d8cba9; border-radius:999px;
+    transition: border-color .25s ease, color .25s ease, background .25s ease;
+    animation: fadeUp .7s .05s var(--ease-out) both;
+  }
+  .header-link:hover{ color:var(--ink); border-color:var(--gold); background:var(--paper); }
+
+  .stage{
+    position:relative; z-index:2;
+    display:flex; flex-direction:column; align-items:center;
+    padding: clamp(30px,8vh,80px) 20px 80px;
+    max-width:1080px; margin:0 auto;
+    min-height:70vh; justify-content:center;
+  }
+
+  .hero-copy{ text-align:center; max-width:480px; margin-bottom:34px; }
+  .eyebrow{
+    margin:0 0 10px; font-size:.72rem; font-weight:700; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--gold); animation: fadeUp .7s .1s var(--ease-out) both;
+  }
+  .headline{
+    margin:0 0 14px; font-family:"Fraunces", serif; font-weight:600;
+    font-size: clamp(2.3rem, 5vw, 3.4rem); line-height:1.05; letter-spacing:-.01em;
+    background: linear-gradient(100deg, var(--ink) 30%, var(--rose) 90%);
+    -webkit-background-clip:text; background-clip:text; color:var(--ink); -webkit-text-fill-color:transparent;
+    animation: fadeUp .8s .18s var(--ease-out) both;
+  }
+  .subhead{ margin:0; color:var(--ink-soft); font-size:1.02rem; line-height:1.55; animation: fadeUp .8s .28s var(--ease-out) both; }
+
+  /* ============ CARD ============ */
+  .card{
+    position:relative; width:100%; max-width:380px;
+    border:1px solid transparent; border-radius: var(--radius-lg);
+    background:
+      linear-gradient(var(--paper), var(--paper)) padding-box,
+      linear-gradient(135deg, var(--gold-soft), transparent 45%, var(--rose-soft)) border-box;
+    box-shadow: 0 30px 60px -30px rgba(60,45,20,.35), 0 2px 0 rgba(255,255,255,.6) inset;
+    padding: clamp(30px,5vw,42px);
+    animation: cardBloom .85s .4s var(--ease-bloom) both;
+  }
+
+  form{ display:flex; flex-direction:column; gap:18px; }
+
+  /* ============ THE EMAIL "SPAWN" MOMENT ============ */
+  .field{ display:flex; flex-direction:column; gap:6px; position:relative; }
+  .field label{ font-size:.78rem; font-weight:700; color:var(--ink-soft); letter-spacing:.02em; }
+
+  .field--email-hero{ animation: emailSpawn .95s .35s var(--ease-bloom) both; }
+  .field--email-hero .spawn-ring{
+    position:absolute; left:50%; top:38px; width:60px; height:60px; margin:-30px 0 0 -30px;
+    border-radius:50%; border:2px solid var(--gold); opacity:0;
+    animation: ringPing 1s .75s ease-out both; pointer-events:none;
+  }
+  .field--email-hero .spawn-ring.ring-2{ border-color: var(--rose); animation-delay: .88s; }
+
+  @keyframes emailSpawn{
+    0%   { opacity:0; transform: scale(.4) translateY(-32px) rotate(-6deg); }
+    55%  { opacity:1; transform: scale(1.07) translateY(4px) rotate(1.5deg); }
+    75%  { transform: scale(.97) translateY(-2px) rotate(-.5deg); }
+    100% { opacity:1; transform:none; }
+  }
+  @keyframes ringPing{ from{ opacity:.55; transform: scale(.5);} to{ opacity:0; transform: scale(2.4);} }
+
+  .input-wrap{ position:relative; }
+  .input-wrap input{
+    width:100%; font-family:inherit; font-size:.98rem;
+    padding:12px 42px 12px 14px;
+    border-radius: var(--radius-sm);
+    border:1.5px solid #e3d6b5;
+    background:#fffdf9;
+    color:var(--ink);
+    outline:none;
+    transition: border-color .22s ease, box-shadow .22s ease;
+  }
+  .input-wrap input::placeholder{ color:#b8ac93; }
+  .input-wrap input.is-bad{ border-color: var(--rose); }
+
+  /* shimmering "traveling light" border on focus */
+  .input-wrap input:focus-visible{
+    border-color: transparent;
+    background:
+      linear-gradient(#fffdf9,#fffdf9) padding-box,
+      linear-gradient(90deg, var(--gold), var(--rose), var(--gold-soft), var(--gold)) border-box;
+    background-size: 100% 100%, 300% 100%;
+    background-position: 0 0, 0% 0%;
+    animation: sweep 2.4s linear infinite;
+    box-shadow: 0 0 0 4px rgba(192,146,59,.14);
+  }
+  @keyframes sweep{ to{ background-position: 0 0, 300% 0%; } }
+
+  .envelope{
+    position:absolute; right:12px; top:50%;
+    width:20px; height:20px;
+    transform: translateY(-50%);
+    animation: bob 3.2s ease-in-out infinite;
+    pointer-events:none;
+  }
+  .envelope.flying{ animation: flyAway .6s var(--ease-out) forwards; }
+  @keyframes bob{ 0%,100%{ transform:translateY(-50%);} 50%{ transform:translateY(-62%);} }
+  @keyframes flyAway{
+    0%{ transform:translateY(-50%) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(-160%) translateX(26px) rotate(22deg); opacity:0; }
+  }
+
+  .field-note{ font-size:.74rem; min-height:14px; display:flex; align-items:center; gap:6px; color:var(--ink-soft); }
+  .field-note.good{ color:var(--sage); font-weight:600; }
+  .field-note.bad{ color:var(--rose); font-weight:600; }
+
+  /* ============ SUBMIT BUTTON ============ */
+  .submit-btn{
+    position:relative; overflow:visible; border:none; cursor:pointer;
+    padding:14px 20px; border-radius: var(--radius-sm);
+    font-family:inherit; font-weight:700; font-size:.98rem; color:#fffdf6;
+    background: linear-gradient(120deg, var(--gold) 0%, var(--rose) 100%);
+    box-shadow: 0 14px 26px -12px rgba(189,95,114,.55);
+    transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out), filter .2s ease;
+    animation: fieldRise .55s .7s var(--ease-out) both;
+  }
+  .submit-btn:hover{ transform: translateY(-2px); box-shadow: 0 18px 30px -12px rgba(189,95,114,.6); filter:brightness(1.04); }
+  .submit-btn:active{ transform: translateY(0); }
+  .submit-btn:focus-visible{ outline:3px solid var(--gold-soft); outline-offset:3px; }
+  .submit-btn.is-loading .btn-label{ opacity:0; }
+  .submit-btn.is-loading::after{
+    content:""; position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px;
+    border-radius:50%; border:2px solid rgba(255,255,255,.55); border-top-color:#fff;
+    animation: spin .7s linear infinite;
+  }
+  .submit-btn.is-success{ background: linear-gradient(120deg, var(--sage-soft), var(--sage)); }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @keyframes fieldRise{ from{ opacity:0; transform:translateY(12px);} to{ opacity:1; transform:none; } }
+
+  .btn-label{ transition: opacity .15s ease; }
+  .btn-particles{ position:absolute; inset:0; pointer-events:none; }
+  .particle{
+    position:absolute; left:50%; top:50%; width:6px; height:6px; border-radius:50%;
+    background: var(--gold-soft);
+    animation: particleBurst .7s var(--ease-out) forwards;
+  }
+  @keyframes particleBurst{ to{ transform: translate(var(--tx), var(--ty)) scale(0); opacity:0; } }
+
+  .card.is-shaking{ animation: shake .45s ease; }
+  @keyframes shake{
+    10%,90%{ transform:translateX(-2px); } 20%,80%{ transform:translateX(3px); }
+    30%,50%,70%{ transform:translateX(-6px); } 40%,60%{ transform:translateX(6px); }
+  }
+
+  .form-footer{ text-align:center; font-size:.85rem; color:var(--ink-soft); margin:2px 0 0; animation: fadeUp .6s 1s var(--ease-out) both; }
+  .form-footer a{ color:var(--rose); font-weight:700; text-decoration:none; }
+  .form-footer a:hover{ text-decoration:underline; }
+
+  /* idle "breathing" dots — keeps the minimal page quietly alive */
+  .aspects-dots{ display:flex; justify-content:center; gap:8px; margin-top:4px; animation: fadeUp .6s 1.05s var(--ease-out) both; }
+  .aspects-dots span{ width:7px; height:7px; border-radius:50%; background: var(--gold-soft); animation: pulseDot 1.8s ease-in-out infinite; }
+  .aspects-dots span:nth-child(2n){ background: var(--rose-soft); }
+  .aspects-dots span:nth-child(3n){ background: var(--sage-soft); }
+  .aspects-dots span:nth-child(1){ animation-delay:0s; }
+  .aspects-dots span:nth-child(2){ animation-delay:.12s; }
+  .aspects-dots span:nth-child(3){ animation-delay:.24s; }
+  .aspects-dots span:nth-child(4){ animation-delay:.36s; }
+  .aspects-dots span:nth-child(5){ animation-delay:.48s; }
+  .aspects-dots span:nth-child(6){ animation-delay:.6s; }
+  .aspects-dots span:nth-child(7){ animation-delay:.72s; }
+  @keyframes pulseDot{ 0%,100%{ transform:scale(1); opacity:.55;} 50%{ transform:scale(1.5); opacity:1;} }
+
+  footer.page-footer{ position:relative; z-index:2; text-align:center; padding:10px 20px 40px; font-size:.78rem; color:var(--ink-soft); }
+
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px);} to{ opacity:1; transform:none; } }
+  @keyframes cardBloom{ from{ opacity:0; transform:scale(.92) translateY(26px);} to{ opacity:1; transform:none; } }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+    .ambient-bg .cluster-a, .ambient-bg .cluster-b, .ambient-bg .blob, .envelope, .aspects-dots span{ animation:none !important; }
+  }
+
+  @media (max-width:520px){
+    .site-header{ padding:16px; }
+    .headline{ font-size:2rem; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="blob blob--gold"></div>
+    <div class="blob blob--rose"></div>
+    <svg class="cluster-a" viewBox="0 0 400 400" fill="none">
+      <g stroke="#C0923B" stroke-width="2">
+        <circle cx="200" cy="200" r="70"/><circle cx="270" cy="200" r="70"/><circle cx="235" cy="139" r="70"/>
+        <circle cx="165" cy="139" r="70"/><circle cx="130" cy="200" r="70"/><circle cx="165" cy="261" r="70"/><circle cx="235" cy="261" r="70"/>
+      </g>
+    </svg>
+    <svg class="cluster-b" viewBox="0 0 400 400" fill="none">
+      <g stroke="#BD5F72" stroke-width="2">
+        <circle cx="200" cy="200" r="70"/><circle cx="270" cy="200" r="70"/><circle cx="235" cy="139" r="70"/>
+        <circle cx="165" cy="139" r="70"/><circle cx="130" cy="200" r="70"/><circle cx="165" cy="261" r="70"/><circle cx="235" cy="261" r="70"/>
+      </g>
+    </svg>
+  </div>
+
+  <header class="site-header">
+    <div class="brand">
+      <!-- TODO: swap "logo here" for the real logo file path -->
+      <img class="brand-logo" id="brandLogo" src="temp_logo.png" alt="Love is Foundation logo"
+           onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
+      <div class="brand-logo-fallback" id="logoFallback">
+        <svg width="40" height="40" viewBox="0 0 100 100" fill="none">
+          <g stroke="#C0923B" stroke-width="3">
+            <circle cx="50" cy="50" r="18"/><circle cx="68" cy="50" r="18"/><circle cx="59" cy="34" r="18"/>
+            <circle cx="41" cy="34" r="18"/><circle cx="32" cy="50" r="18"/><circle cx="41" cy="66" r="18"/><circle cx="59" cy="66" r="18"/>
+          </g>
+        </svg>
+      </div>
+      <span class="brand-word">LiF Hub</span>
+    </div>
+    <a class="header-link" href="https://nicholas02k17.github.io/hub/">Visit LiF Hub</a>
+  </header>
+
+  <main class="stage">
+    <section class="hero-copy">
+      <p class="eyebrow">Love is Foundation</p>
+      <h1 class="headline">Welcome Home</h1>
+      <p class="subhead">Pop in your email and we'll send you a one-time code to sign in.</p>
+    </section>
+
+    <section class="card" id="loginCard">
+      <form id="loginForm" novalidate>
+
+        <div class="field field--email-hero" id="emailField">
+          <span class="spawn-ring" aria-hidden="true"></span>
+          <span class="spawn-ring ring-2" aria-hidden="true"></span>
+          <label for="loginEmail">Email</label>
+          <div class="input-wrap">
+            <input type="email" id="loginEmail" name="email" placeholder="jamie@example.com" autocomplete="email" required>
+            <svg class="envelope" id="envelope" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="5" width="20" height="14" rx="2.5" stroke="#C0923B" stroke-width="1.6"/>
+              <path d="M3 6.5L12 13L21 6.5" stroke="#BD5F72" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <p class="field-note" id="loginNote" aria-live="polite">No password needed — just your inbox.</p>
+        </div>
+
+        <button type="submit" class="submit-btn" id="loginBtn">
+          <span class="btn-label">Send my code</span>
+          <span class="btn-particles" id="loginParticles" aria-hidden="true"></span>
+        </button>
+
+        <p class="field-note good" id="loginSentNote" aria-live="polite" style="display:none; justify-content:center; text-align:center;"></p>
+
+        <p class="form-footer">New to the Hub? <a href="register.html">Create an account</a></p>
+
+        <div class="aspects-dots" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <footer class="page-footer">
+    Love is Foundation — Parksville · St. Albert · Stockholm
+  </footer>
+
+<script>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var form      = document.getElementById("loginForm");
+  var card      = document.getElementById("loginCard");
+  var emailIn   = document.getElementById("loginEmail");
+  var note      = document.getElementById("loginNote");
+  var sentNote  = document.getElementById("loginSentNote");
+  var btn       = document.getElementById("loginBtn");
+  var envelope  = document.getElementById("envelope");
+  var particlesHost = document.getElementById("loginParticles");
+
+  emailIn.addEventListener("input", function(){
+    emailIn.classList.remove("is-bad");
+    note.textContent = "No password needed — just your inbox.";
+    note.className = "field-note";
+  });
+
+  function looksLikeEmail(v){
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }
+
+  function burst(){
+    if(reduceMotion) return;
+    for(var i=0;i<14;i++){
+      var p = document.createElement("span");
+      p.className = "particle";
+      var angle = Math.random()*Math.PI*2;
+      var dist  = 40 + Math.random()*50;
+      p.style.setProperty("--tx", Math.cos(angle)*dist + "px");
+      p.style.setProperty("--ty", Math.sin(angle)*dist + "px");
+      p.style.background = i % 2 === 0 ? "#C0923B" : "#BD5F72";
+      particlesHost.appendChild(p);
+      (function(node){ setTimeout(function(){ node.remove(); }, 750); })(p);
+    }
+  }
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var email = emailIn.value.trim();
+
+    if(!looksLikeEmail(email)){
+      card.classList.remove("is-shaking");
+      void card.offsetWidth;
+      card.classList.add("is-shaking");
+      emailIn.classList.add("is-bad");
+      note.textContent = "That doesn't look like an email yet.";
+      note.className = "field-note bad";
+      emailIn.focus();
+      return;
+    }
+
+    btn.classList.add("is-loading");
+    btn.disabled = true;
+
+    setTimeout(function(){
+      btn.classList.remove("is-loading");
+      btn.classList.add("is-success");
+      btn.querySelector(".btn-label").textContent = "Check your email!";
+      envelope.classList.add("flying");
+      burst();
+      sentNote.textContent = "We sent a one-time code to " + email + ".";
+      sentNote.style.display = "flex";
+      setTimeout(function(){
+        // Once the six-digit code is real, this is where the verified
+        // session lands: straight onto the member's own dashboard.
+        window.location.href = "dashboard.html";
+      }, 1400);
+    }, 700);
+  });
+
+})();
+</script>
+</body>
+</html>

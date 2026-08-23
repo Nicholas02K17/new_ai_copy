@@ -1,0 +1,9 @@
+{
+  "name": "lif-hub-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Love is Foundation — LiF Interactive Engagement Hub (frontend prototype)",
+  "scripts": {
+    "start": "npx --yes serve . -p 5500"
+  }
+}

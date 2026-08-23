@@ -1,0 +1,94 @@
+/**
+ * theme.css - design tokens only. No layout rules live here so the
+ * whole visual identity can be re-tuned from one file.
+ *
+ * Colors: sampled directly from the LiF flower-of-life logo you
+ * uploaded (temp_logo.png) - one ring color per aspect, pixel-sampled
+ * from the actual file rather than guessed. If the logo's colors
+ * change later, this is the only file that needs new hex values -
+ * everything else references these variables by name.
+ */
+
+:root {
+  /* ---- neutrals, sampled from the palette image background ---- */
+  --paper: #FDF8EA;
+  --paper-raised: #FFFFFF;
+  --ink: #3A3A3A;
+  --ink-muted: #6B6B6B;
+  --ink-faint: #9B9994;
+  --line: #E6DFCE;
+  --line-strong: #D8CFB8;
+
+  /* ---- the seven aspects, sampled from the logo's seven circles ----
+     600 = the ring color (used for text/fills/borders - yellow and
+     orange were darkened slightly from the raw sample so they still
+     read clearly as text on a light background; every other color
+     is the exact sampled value). 100 = a light tint of that same
+     color, used for badge backgrounds so the 600 text stays legible
+     on top of it. */
+  --source-resources-600: #E00000;     --source-resources-100: #FBDBDB;      /* red    - upper-left circle */
+  --divine-potential-600: #7030A0;     --divine-potential-100: #EBE2F2;      /* purple - centre circle */
+  --presence-being-600: #205E9C;       --presence-being-100: #E0E8F1;        /* indigo - top circle */
+  --engagement-communion-600: #0070C0; --engagement-communion-100: #DBEBF6;  /* blue   - upper-right circle */
+  --nature-nurture-600: #387C2A;       --nature-nurture-100: #E3EDE1;        /* green  - lower-right circle */
+  --community-inclusion-600: #CC9900;  --community-inclusion-100: #F8F1DB;  /* gold   - bottom circle (darkened from the logo's #FFD966 so it reads as text) */
+  --service-offerings-600: #D86213;    --service-offerings-100: #FAE9DE;    /* orange - lower-left circle (slightly darkened from the logo's #ED7D31) */
+
+  /* ---- brand accent -----------------------------------------
+     The logo's centre circle - Divine Human Potential - is the
+     unifying, "all aspects meet here" circle of the design, so the
+     UI's own accent (buttons, links, focus rings) uses that purple
+     rather than an arbitrary eighth color. */
+  --accent: var(--divine-potential-600);
+  --accent-strong: #4A2070;
+  --accent-soft: var(--divine-potential-100);
+  --accent-contrast: #FFFFFF;
+
+  --danger: #B91C1C;
+  --danger-soft: #FBE4E4;
+
+  /* ---- type --------------------------------------------------- */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Karla', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+
+  --fs-2xl: 2.75rem;
+  --fs-xl: 1.875rem;
+  --fs-lg: 1.375rem;
+  --fs-md: 1rem;
+  --fs-sm: 0.875rem;
+  --fs-xs: 0.75rem;
+
+  /* ---- spacing (4px base) -------------------------------------- */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(58, 50, 30, 0.08);
+  --shadow-md: 0 8px 24px rgba(58, 50, 30, 0.12);
+  --shadow-lg: 0 16px 40px rgba(58, 50, 30, 0.18);
+}
+
+/* Aspect-keyed utility classes so any component can say
+   class="aspect-chip chakra-divine-potential" and get the right
+   colors without inline styles scattered everywhere. Kept the
+   "chakra-" class prefix and the aspect object's "chakra" field
+   name internally (see data.js) purely so every component that
+   already builds a class name from it keeps working unchanged -
+   it's just a lookup key now, nothing to do with actual chakras. */
+.chakra-source-resources     { --chakra-600: var(--source-resources-600);     --chakra-100: var(--source-resources-100); }
+.chakra-divine-potential     { --chakra-600: var(--divine-potential-600);     --chakra-100: var(--divine-potential-100); }
+.chakra-presence-being       { --chakra-600: var(--presence-being-600);       --chakra-100: var(--presence-being-100); }
+.chakra-engagement-communion { --chakra-600: var(--engagement-communion-600); --chakra-100: var(--engagement-communion-100); }
+.chakra-nature-nurture       { --chakra-600: var(--nature-nurture-600);       --chakra-100: var(--nature-nurture-100); }
+.chakra-community-inclusion  { --chakra-600: var(--community-inclusion-600);  --chakra-100: var(--community-inclusion-100); }
+.chakra-service-offerings    { --chakra-600: var(--service-offerings-600);    --chakra-100: var(--service-offerings-100); }

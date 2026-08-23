@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LiF Hub — Love is Foundation</title>
+<meta name="description" content="The LiF Interactive Engagement Hub — discover events, people, groups, and organizations across the Love is Foundation ecosystem.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Karla:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div id="appRoot">
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-mark" src="temp_logo.png" alt="Love is Foundation logo" width="38" height="38">
+      <div>
+        <div>LiF Hub</div>
+        <div class="brand-sub">Love is Foundation</div>
+      </div>
+    </div>
+
+    <nav class="main-nav">
+      <button class="nav-item is-active" data-view="events" type="button">Events</button>
+      <button class="nav-item hidden" data-view="calendar" data-feature="calendar" type="button">Calendar</button>
+      <button class="nav-item hidden" data-view="people" data-feature="people" type="button">People</button>
+      <button class="nav-item hidden" data-view="groups" data-feature="groups" type="button">Groups</button>
+      <button class="nav-item hidden" data-view="organizations" data-feature="organizations" type="button">Organizations</button>
+      <button class="nav-item hidden" data-view="opportunities" data-feature="opportunities" type="button">Opportunities</button>
+    </nav>
+
+    <div class="topbar-actions">
+      <button class="icon-btn hidden" id="dashboardToggleBtn" data-feature="dashboard" type="button" aria-label="Toggle personal dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path></svg>
+      </button>
+      <button class="pill-btn" id="moreFeaturesBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"></circle><circle cx="16" cy="12" r="2" fill="currentColor" stroke="none"></circle><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"></circle></svg>
+        More Features
+      </button>
+      <a class="pill-btn" href="dashboard.html" id="myDashboardLink">My Dashboard</a>
+      <button class="pill-btn pill-btn--accent" id="loginBtn" type="button">Log In</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+    <aside id="dashboardSidebar" class="side-panel hidden"></aside>
+    <aside id="filterDrawer" class="side-panel hidden"></aside>
+
+    <main class="stage">
+
+      <section class="view" data-view="events">
+        <div class="toolbar">
+          <div class="toolbar-row">
+            <div class="aspect-wheel-wrap">
+              <div id="aspectWheelSlot"></div>
+              <span class="aspect-wheel-caption">Filter by LiF Aspect — click a circle</span>
+            </div>
+            <div class="search-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+              <input type="search" id="searchInput" placeholder="Search events…" aria-label="Search events">
+            </div>
+            <button class="chip" id="forMeChip" type="button">For me</button>
+            <div class="chip-group">
+              <button class="chip format-chip is-active" data-format="all" type="button">All</button>
+              <button class="chip format-chip" data-format="in-person" type="button">In Person</button>
+              <button class="chip format-chip" data-format="online" type="button">Online</button>
+              <button class="chip format-chip" data-format="hybrid" type="button">Hybrid</button>
+            </div>
+            <div class="view-toggle">
+              <button data-mode="map" class="is-active" type="button">Map</button>
+              <button data-mode="list" type="button">List</button>
+            </div>
+            <button class="pill-btn filters-toggle-btn hidden" id="filtersToggleBtn" data-feature="advancedFilters" type="button">
+              Filters <span class="count hidden" id="filtersCount">0</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="map-wrap" id="mapWrap">
+          <div id="map"></div>
+        </div>
+        <div class="online-strip hidden" id="onlineStrip">
+          <h3>Online events</h3>
+          <div class="online-strip-row" id="onlineStripRow"></div>
+        </div>
+        <div class="card-grid hidden" id="cardGrid"></div>
+      </section>
+
+      <section class="view hidden" data-view="calendar">
+        <div class="view-header"><h2>Master Calendar</h2><p>Every public LiF event in one place — the same events shown on the map, filtered the same way. Set filters from the Events tab; they carry over here automatically.</p></div>
+        <div class="calendar-wrap"><div id="calendarEl"></div></div>
+      </section>
+
+      <section class="view hidden" data-view="people">
+        <div class="view-header"><h2>People</h2><p>Members of the LiF ecosystem. Connect with people working in similar aspects or sectors.</p></div>
+        <div class="directory-grid" id="peopleGrid"></div>
+      </section>
+
+      <section class="view hidden" data-view="groups">
+        <div class="view-header"><h2>Groups</h2><p>Ongoing circles and co-creation groups you can join.</p></div>
+        <div class="directory-grid" id="groupsGrid"></div>
+      </section>
+
+      <section class="view hidden" data-view="organizations">
+        <div class="view-header"><h2>Organizations</h2><p>Partner organizations in collaborative partnership with Love is Foundation. Some host events open only to their own members — signed out, you'll see how those look from the outside.</p></div>
+        <div class="directory-grid" id="organizationsGrid"></div>
+      </section>
+
+      <section class="view hidden" data-view="opportunities">
+        <div class="view-header"><h2>Get Involved</h2><p>Volunteer roles, staff positions, and partnership opportunities.</p></div>
+        <div class="directory-grid" id="opportunitiesGrid"></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<div id="eventModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <button class="modal-close" aria-label="Close event details">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="modal-body"></div>
+  </div>
+</div>
+
+<div id="scrimCustomize" class="scrim hidden"></div>
+<aside id="customizePanel" class="slide-panel hidden"></aside>
+
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/map.js"></script>
+<script src="js/filters.js"></script>
+<script src="js/eventDetail.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/directory.js"></script>
+<script src="js/calendarView.js"></script>
+<script src="js/customize.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

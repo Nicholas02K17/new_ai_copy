@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Dashboard — LiF Playground</title>
+<meta name="description" content="Your personal LiF dashboard — events, groups, playmates, commons and resources, arranged the way you want them.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+<!-- Ambient flower-of-life field, same as the sign-up and sign-in pages
+     so arriving here still feels like the same room. -->
+<div class="ambient-bg" aria-hidden="true">
+  <svg class="cluster-a" viewBox="0 0 400 400" fill="none">
+    <g stroke="#C0923B" stroke-width="2">
+      <circle cx="200" cy="200" r="70"/><circle cx="270" cy="200" r="70"/><circle cx="235" cy="139" r="70"/>
+      <circle cx="165" cy="139" r="70"/><circle cx="130" cy="200" r="70"/><circle cx="165" cy="261" r="70"/>
+      <circle cx="235" cy="261" r="70"/>
+    </g>
+  </svg>
+  <svg class="cluster-b" viewBox="0 0 400 400" fill="none">
+    <g stroke="#BD5F72" stroke-width="2">
+      <circle cx="200" cy="200" r="70"/><circle cx="270" cy="200" r="70"/><circle cx="235" cy="139" r="70"/>
+      <circle cx="165" cy="139" r="70"/><circle cx="130" cy="200" r="70"/><circle cx="165" cy="261" r="70"/>
+      <circle cx="235" cy="261" r="70"/>
+    </g>
+  </svg>
+</div>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <img src="temp_logo.png" alt="" width="36" height="36">
+    <span>
+      <span class="brand-word">LiF Playground</span>
+      <span class="brand-sub">Love is Foundation</span>
+    </span>
+  </a>
+
+  <!-- Global search. It sits in the header rather than inside any one
+       panel on purpose: the dashboard reflects your preferences, but it
+       must never fence you off from the rest of the playground. -->
+  <div class="global-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="search" id="globalSearch" autocomplete="off"
+           placeholder="Search the whole playground — events, groups, people, resources…"
+           aria-label="Search the whole LiF playground">
+    <div class="search-results hidden" id="searchResults"></div>
+  </div>
+
+  <div class="topbar-actions">
+    <label class="sr-only" for="langSelect">Platform language</label>
+    <select class="lang-select" id="langSelect" title="Platform language"></select>
+
+    <button class="icon-btn" id="bellBtn" type="button" aria-label="Notifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/>
+      </svg>
+      <span class="dot hidden" id="bellCount">0</span>
+    </button>
+
+    <button class="icon-btn avatar-btn" id="avatarBtn" type="button" aria-label="Open my profile">
+      <span class="avatar" id="topAvatar">AR</span>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <div class="welcome-bar">
+    <div class="welcome-copy">
+      <p class="eyebrow">Your dashboard</p>
+      <h1 id="welcomeHeading">Welcome home, <em>Alex</em></h1>
+      <p class="welcome-sub" id="welcomeSub"></p>
+    </div>
+
+    <div class="bar-controls">
+      <div class="layout-switch" id="layoutSwitch" role="group" aria-label="Dashboard layout">
+        <button type="button" data-layout="constellation" title="Cards around a central map or calendar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="4" r="2"/><circle cx="12" cy="20" r="2"/><circle cx="4" cy="12" r="2"/><circle cx="20" cy="12" r="2"/></svg>
+          <span>Constellation</span>
+        </button>
+        <button type="button" data-layout="cards" title="A simple grid of cards">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></svg>
+          <span>Cards</span>
+        </button>
+        <button type="button" data-layout="sidebar" title="A rail of features with details beside it">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="6" height="18" rx="1.6"/><rect x="11.5" y="3" width="9.5" height="18" rx="1.6"/></svg>
+          <span>Sidebar</span>
+        </button>
+      </div>
+
+      <button class="btn" id="customizeBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+        Customize
+      </button>
+    </div>
+  </div>
+
+  <!-- data-layout is swapped by the layout switcher; the board's whole
+       contents are rendered by js/dashboardPage.js. -->
+  <div class="stage" id="stage" data-layout="constellation">
+    <div class="board" id="board"></div>
+  </div>
+</div>
+
+<div class="scrim hidden" id="scrim"></div>
+<aside class="detail-drawer hidden" id="detailDrawer" aria-label="Feature details"></aside>
+<div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.21/index.global.min.js"></script>
+
+<script src="js/data.js"></script>
+<script src="js/dashboardData.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/dashboardPage.js"></script>
+</body>
+</html>
