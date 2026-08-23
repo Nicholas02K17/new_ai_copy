@@ -44,7 +44,22 @@ a { color: var(--accent); }
   transition: background .15s ease, color .15s ease;
 }
 .nav-item:hover { background: var(--accent-soft); color: var(--accent-strong); }
-.nav-item.is-active { background: var(--accent); color: var(--accent-contrast); }
+/* The view you are already on - not a button to press. This used to be
+   a solid accent pill, which made it the loudest control in the topbar
+   and read as a primary action, so people clicked it and nothing
+   happened. Tinted rather than filled, and not interactive. */
+.nav-item.is-active {
+  background: var(--accent-soft); color: var(--accent-strong);
+  font-weight: 700; cursor: default;
+}
+.nav-item.is-active:hover { background: var(--accent-soft); color: var(--accent-strong); }
+.nav-count {
+  display: inline-block; margin-left: var(--sp-2);
+  font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 500;
+  padding: 1px var(--sp-2); border-radius: var(--radius-pill);
+  background: var(--paper); color: var(--ink-muted);
+}
+.nav-item.is-active .nav-count { background: var(--accent); color: var(--accent-contrast); }
 
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: var(--sp-2); }
 

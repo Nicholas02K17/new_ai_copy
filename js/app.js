@@ -81,6 +81,14 @@ LIF.app = (function () {
   function refreshEvents() {
     var filtered = LIF.filters.getFilteredEvents();
     syncToolbarUI();
+
+    /* The Events tab reports how many events the current filters leave.
+       It is usually the tab you are already on, so without this it is a
+       label that never changes - and a control that never responds to
+       anything reads as broken. */
+    var navCount = U.$('#eventsNavCount');
+    if (navCount) navCount.textContent = String(filtered.length);
+
     if (LIF.state.activeView === 'events') renderEventsStage(filtered);
     else if (LIF.state.activeView === 'calendar') LIF.calendarView.render(filtered);
   }
@@ -161,7 +169,11 @@ LIF.app = (function () {
 
   function setView(name) {
     LIF.state.activeView = name;
-    U.$all('.nav-item[data-view]').forEach(function (btn) { btn.classList.toggle('is-active', btn.dataset.view === name); });
+    U.$all('.nav-item[data-view]').forEach(function (btn) {
+      var on = btn.dataset.view === name;
+      btn.classList.toggle('is-active', on);
+      if (on) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
+    });
     U.$all('.view').forEach(function (section) { section.classList.toggle('hidden', section.dataset.view !== name); });
     if (VIEW_RENDERERS[name]) VIEW_RENDERERS[name]();
     if (name === 'events') LIF.mapModule.invalidateSize();

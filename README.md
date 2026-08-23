@@ -121,6 +121,12 @@ straight to the list view automatically, following the split your team landed on
 Aug 13 (in-person/hybrid → map, virtual → cards).
 
 **Minimalist by default.** On first load, only the events map/list and basic search show up.
+The **Events** tab stays in the nav at all times as the anchor for the events area, with the other
+views appearing beside it as they're switched on. Two things about that tab, learned the hard way:
+it's tinted rather than filled when it's the current view, so it never reads as a call to action
+you're supposed to press — and it carries a **live count of the events the current filters leave**,
+so it responds to something even when it's the tab you're already on. A control that never changes
+reads as broken.
 "More Features" (top-right) reveals switches for the personal dashboard, calendar, and the
 People/Groups/Organizations/Opportunities tabs, plus an "advanced filters" switch that reveals
 the full filter drawer (sectors, date, time, cost, language, and the rest of the framework doc's
